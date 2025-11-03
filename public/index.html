@@ -4,669 +4,205 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Almoxarifado • v7.8</title>
+  <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    .tab[aria-selected="true"] { background:#020617; color:#fff; }
-    .badge{display:inline-block;padding:2px 8px;border-radius:9999px;font-size:12px}
-  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
-<body class="bg-slate-950 text-slate-100">
-  <div class="min-h-screen flex flex-col">
-    <!-- Top bar -->
-    <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur">
-      <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <div class="h-8 w-8 rounded-xl bg-sky-500/20 flex items-center justify-center">
-            <span class="text-sky-400 text-lg font-bold">A</span>
+<body class="bg-slate-50 text-slate-900">
+  <header class="w-full border-b bg-white/70 backdrop-blur sticky top-0 z-10">
+    <div class="max-w-7xl mx-auto flex items-center justify-between p-3">
+      <div class="text-lg font-semibold">Almoxarifado • <span id="app-ver">v7.8</span></div>
+      <div class="flex items-center gap-2">
+        <span id="badge-role" class="badge text-white bg-slate-900">ROLE</span>
+        <span id="badge-user" class="text-sm">User</span>
+        <button id="btn-logout" class="btn2" type="button">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto p-4" id="root">
+    <!-- LOGIN -->
+    <section id="view-login" class="min-h-[70vh] grid place-items-center">
+      <div class="bg-white rounded-2xl shadow w-full max-w-md p-6">
+        <h1 class="text-2xl font-semibold mb-2">Almoxarifado • Login</h1>
+        <p class="text-sm text-slate-500 mb-4">Use <b>admin/admin</b>, <b>almox/almox</b> ou <b>sol/sol</b>.</p>
+        <div class="space-y-3">
+          <div><label class="text-sm">Usuário</label><input id="login-user" class="inp" autocomplete="username"></div>
+          <div><label class="text-sm">Senha</label><input id="login-pass" type="password" class="inp" autocomplete="current-password"></div>
+          <div id="login-err" class="text-red-600 text-sm hidden">Usuário ou senha inválidos.</div>
+          <button id="btn-login" class="btn w-full" type="button">Entrar</button>
+          <button id="btn-wipe" class="btn2 w-full" type="button">Limpar dados (LocalStorage)</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- APP -->
+    <section id="view-app" class="hidden">
+      <!-- NAV -->
+      <nav class="navbar mb-4">
+        <button class="tab navbtn" data-t="tab-itens" type="button">Itens</button>
+        <button class="tab navbtn" data-t="tab-cad" type="button">Cadastrar</button>
+        <button class="tab navbtn" data-t="tab-sol" type="button">Solicitações</button>
+        <button class="tab navbtn" data-t="tab-almox" type="button">Almoxarife</button>
+        <button class="tab navbtn" data-t="tab-res" type="button">Resumo</button>
+        <button class="tab navbtn" data-t="tab-users" type="button">Usuários</button>
+      </nav>
+
+      <!-- ITENS -->
+      <section id="tab-itens" class="card hidden">
+        <div class="flex items-center justify-between mb-3">
+          <input id="itens-q" class="inp max-w-md" placeholder="Buscar insumo/código/unidade">
+          <div class="text-xs text-slate-500">* Caixa fica vermelha quando estoque &lt; mínimo.</div>
+        </div>
+        <div id="itens-list" class="grid md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+        <div id="itens-empty" class="muted hidden">Nenhum item.</div>
+      </section>
+
+      <!-- CADASTRO -->
+      <section id="tab-cad" class="card hidden">
+        <h2 class="title">Cadastrar Insumo</h2>
+        <form id="cad-form" class="grid md:grid-cols-2 gap-3">
+          <div class="md:col-span-2"><label class="text-sm">Nome Insumo</label><input name="name" class="inp" required></div>
+          <div><label class="text-sm">Cód. Material</label><input name="code" class="inp"></div>
+          <div><label class="text-sm">Unidade</label><input name="unit" class="inp" placeholder="ex: un, cx, kg, m"></div>
+          <div class="md:col-span-2"><label class="text-sm">Inserir Foto</label><input name="image" type="file" accept="image/*" class="inp"></div>
+          <div class="md:col-span-2 flex justify-end"><button class="btn" type="submit">Cadastrar</button></div>
+        </form>
+      </section>
+
+      <!-- SOLICITAÇÕES -->
+      <section id="tab-sol" class="card hidden">
+        <div class="grid lg:grid-cols-3 gap-4">
+          <div>
+            <h2 class="title">Nova Solicitação</h2>
+            <div class="space-y-3 mb-3">
+              <input id="s-pedido" class="inp" placeholder="Pedido (ex: 2025-0001)">
+              <input id="s-linha" class="inp" placeholder="Linha">
+              <input id="s-forn" class="inp" placeholder="Fornecedor">
+              <input id="s-marca" class="inp" placeholder="Marca">
+            </div>
+            <div class="box">
+              <label class="text-sm">Nome Insumo</label>
+              <select id="s-item" class="inp"></select>
+              <div class="grid grid-cols-3 gap-2 text-sm mt-2">
+                <input id="s-code" class="inp" readonly>
+                <input id="s-unit" class="inp" readonly>
+                <input id="s-stock" class="inp" readonly>
+              </div>
+              <div id="s-photo" class="text-xs text-slate-500 mt-2">Sem foto</div>
+              <div class="grid grid-cols-3 gap-2 mt-2">
+                <input id="s-qt" type="number" min="1" value="1" class="inp">
+                <input id="s-vu" type="number" min="0" step="0.01" value="0" class="inp">
+                <input id="s-total" class="inp" readonly>
+              </div>
+              <button id="s-add" class="btn w-full mt-2" type="button">Adicionar material</button>
+            </div>
+          </div>
+          <div class="lg:col-span-2">
+            <div class="flex items-center justify-between">
+              <h3 class="font-semibold mb-2">Materiais adicionados</h3>
+              <button id="s-pdf" class="btn2" type="button">Baixar PDF (rascunho)</button>
+            </div>
+            <div id="s-list" class="space-y-3"></div>
+            <div id="s-empty" class="muted">Nenhum material.</div>
+            <div class="flex justify-end mt-3"><button id="s-save" class="btn" type="button">Salvar solicitação</button></div>
+            <hr class="my-6">
+            <div class="flex items-center justify-between">
+              <h3 class="font-semibold">Minhas solicitações</h3>
+              <input id="s-q" class="inp text-sm" placeholder="Buscar por pedido/fornecedor/marca">
+            </div>
+            <div id="s-me" class="space-y-3"></div>
+            <div id="s-me-empty" class="muted hidden">Nenhuma solicitação.</div>
+            <div class="flex justify-end mt-3"><button id="s-pdf-all" class="btn2" type="button">Baixar PDF (todas)</button></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ALMOX -->
+      <section id="tab-almox" class="card hidden">
+        <div class="grid lg:grid-cols-3 gap-4">
+          <div>
+            <h2 class="title">Calendário</h2>
+            <div class="flex items-center gap-2 mb-2">
+              <button id="c-prev" class="btn2" type="button">&larr;</button>
+              <div id="c-title" class="font-semibold"></div>
+              <button id="c-next" class="btn2" type="button">&rarr;</button>
+            </div>
+            <table class="calendar w-full border text-sm">
+              <thead><tr class="text-slate-500"><th>Dom</th><th>Seg</th><th>Ter</th><th>Qua</th><th>Qui</th><th>Sex</th><th>Sáb</th></tr></thead>
+              <tbody id="c-body"></tbody>
+            </table>
+            <div class="text-xs mt-2 flex items-center gap-4">
+              <span><span class="dot bg-red-600"></span> Pendente</span>
+              <span><span class="dot bg-amber-600"></span> Parcial</span>
+              <span><span class="dot bg-green-600"></span> Concluído</span>
+            </div>
+            <div id="c-day" class="mt-3 text-sm"></div>
+          </div>
+          <div class="lg:col-span-2">
+            <h2 class="title">Acompanhar Solicitações</h2>
+            <div id="a-list" class="space-y-3"></div>
+            <div id="a-empty" class="muted">Nenhuma solicitação pendente.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RESUMO -->
+      <section id="tab-res" class="card hidden">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="title">Resumo</h2>
+          <div class="flex items-center gap-2">
+            <input id="r-q" class="inp text-sm w-64" placeholder="Buscar (pedido/fornecedor/marca)">
+            <button id="r-pdf" class="btn2" type="button">Baixar PDF Geral</button>
+          </div>
+        </div>
+        <div class="text-xs mb-3 flex items-center gap-4">
+          <span><span class="pill pill-red">PENDENTE</span></span>
+          <span><span class="pill pill-amber">PARCIAL</span></span>
+          <span><span class="pill pill-green">CONCLUÍDO</span></span>
+        </div>
+        <div class="grid lg:grid-cols-2 gap-4">
+          <div>
+            <h3 class="font-semibold mb-2">Pendentes / Parciais</h3>
+            <div id="r-pend" class="space-y-2"></div>
+            <div id="r-pend-empty" class="muted">Nenhuma pendência.</div>
           </div>
           <div>
-            <div class="font-semibold text-sm sm:text-base">
-              Almoxarifado • <span class="text-sky-400">v7.8</span>
-            </div>
-            <div class="text-[11px] text-slate-400 hidden sm:block">
-              Controle de estoque, solicitações e usuários em tempo real
-            </div>
+            <h3 class="font-semibold mb-2">Concluídas</h3>
+            <div id="r-done" class="space-y-2"></div>
+            <div id="r-done-empty" class="muted">Nada concluído ainda.</div>
           </div>
         </div>
-        <div class="flex items-center gap-2 text-xs sm:text-sm">
-          <span id="top-role" class="hidden badge bg-slate-800 text-slate-100 px-3 py-1 uppercase tracking-wide"></span>
-          <span id="top-name" class="hidden text-slate-300"></span>
-          <button id="btn-logout" class="hidden border border-slate-700 hover:border-slate-500 px-3 py-1 rounded-xl text-xs sm:text-sm">
-            Sair
-          </button>
+        <hr class="my-6">
+        <h3 class="font-semibold mb-2">Totais por Item</h3>
+        <div id="r-tot" class="space-y-1 text-sm"></div>
+      </section>
+
+      <!-- USERS -->
+      <section id="tab-users" class="card hidden">
+        <div class="grid lg:grid-cols-3 gap-4">
+          <div>
+            <h2 class="title">Novo Usuário</h2>
+            <input id="u-name" class="inp" placeholder="Nome">
+            <input id="u-username" class="inp" placeholder="Usuário">
+            <input id="u-password" type="password" class="inp" placeholder="Senha">
+            <select id="u-role" class="inp">
+              <option value="ADMIN">ADMIN</option>
+              <option value="ALMOX">ALMOX</option>
+              <option value="SOLICITANTE" selected>SOLICITANTE</option>
+            </select>
+            <button id="u-create" class="btn mt-2" type="button">Cadastrar</button>
+            <div class="text-xs text-slate-500 mt-3">Logins padrão: <b>admin/admin</b>, <b>almox/almox</b>, <b>sol/sol</b>.</div>
+          </div>
+          <div class="lg:col-span-2">
+            <div id="u-list" class="space-y-2"></div>
+            <div id="u-empty" class="muted hidden">Nenhum usuário.</div>
+          </div>
         </div>
-      </div>
-    </header>
+      </section>
+    </section>
+  </main>
 
-    <!-- Conteúdo -->
-    <main class="flex-1">
-      <div class="max-w-6xl mx-auto px-4 py-6" id="app">
-        <!-- LOGIN -->
-        <section id="login" class="min-h-[60vh] flex items-center justify-center">
-          <div class="w-full max-w-md bg-slate-900/70 border border-slate-800 rounded-2xl shadow-xl shadow-sky-500/5 p-6">
-            <h1 class="text-xl sm:text-2xl font-semibold mb-2">Entrar no sistema</h1>
-            <p class="text-xs sm:text-sm text-slate-400 mb-4">
-              Logins de teste:
-              <span class="font-mono">admin/admin</span>,
-              <span class="font-mono">almox/almox</span>,
-              <span class="font-mono">sol/sol</span>
-            </p>
-            <div class="space-y-3">
-              <div>
-                <label class="text-xs uppercase tracking-wide text-slate-400">Usuário</label>
-                <input id="u" class="mt-1 w-full border border-slate-700 bg-slate-950 rounded-xl px-3 py-2 text-sm outline-none focus:border-sky-500" value="admin" />
-              </div>
-              <div>
-                <label class="text-xs uppercase tracking-wide text-slate-400">Senha</label>
-                <input id="p" type="password" class="mt-1 w-full border border-slate-700 bg-slate-950 rounded-xl px-3 py-2 text-sm outline-none focus:border-sky-500" value="admin" />
-              </div>
-              <div id="e" class="hidden text-xs text-red-400">
-                Usuário ou senha inválidos.
-              </div>
-              <button id="b" class="w-full mt-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-medium rounded-xl py-2 text-sm">
-                Entrar
-              </button>
-            </div>
-          </div>
-        </section>
-
-        <!-- APP -->
-        <section id="appview" class="hidden space-y-4">
-          <!-- Tabs -->
-          <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-2 flex flex-wrap gap-2">
-            <button class="tab flex-1 min-w-[120px] border border-slate-800 rounded-xl px-3 py-2 text-xs sm:text-sm flex items-center justify-center gap-2" data-t="itens">
-              <span>Ver Itens</span>
-            </button>
-            <button class="tab flex-1 min-w-[140px] border border-slate-800 rounded-xl px-3 py-2 text-xs sm:text-sm flex items-center justify-center gap-2" data-t="cad">
-              <span>Cadastrar Item</span>
-            </button>
-            <button class="tab flex-1 min-w-[140px] border border-slate-800 rounded-xl px-3 py-2 text-xs sm:text-sm flex items-center justify-center gap-2" data-t="sol">
-              <span>Solicitações</span>
-            </button>
-            <button class="tab flex-1 min-w-[120px] border border-slate-800 rounded-xl px-3 py-2 text-xs sm:text-sm flex items-center justify-center gap-2" data-t="usr">
-              <span>Usuários</span>
-            </button>
-          </div>
-
-          <!-- TAB: ITENS -->
-          <div id="itens" class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 space-y-4">
-            <div class="flex flex-col sm:flex-row gap-2 sm:items-center">
-              <h2 class="font-semibold text-sm sm:text-base">Itens em estoque</h2>
-              <div class="flex-1"></div>
-              <div class="relative w-full sm:w-64">
-                <input id="busca" class="w-full border border-slate-700 bg-slate-950 rounded-xl px-3 py-2 text-xs sm:text-sm pr-7 outline-none focus:border-sky-500" placeholder="Buscar por nome, código, categoria..." />
-                <span class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 text-xs">🔍</span>
-              </div>
-            </div>
-            <div id="itenslist" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"></div>
-            <div id="itensvazio" class="hidden text-center text-slate-500 text-sm py-8">
-              Nenhum item cadastrado.
-            </div>
-          </div>
-
-          <!-- TAB: CADASTRAR ITEM -->
-          <div id="cad" class="hidden bg-slate-900/70 border border-slate-800 rounded-2xl p-4">
-            <div class="flex items-center justify-between mb-4">
-              <h2 class="font-semibold text-sm sm:text-base">Cadastrar novo item</h2>
-              <span class="text-[11px] text-slate-400">Somente ADMIN / ALMOX</span>
-            </div>
-            <form id="cadform" class="grid gap-3 md:grid-cols-2">
-              <div>
-                <label class="text-xs uppercase tracking-wide text-slate-400">Nome</label>
-                <input name="name" required class="mt-1 w-full border border-slate-700 bg-slate-950 rounded-xl px-3 py-2 text-sm outline-none focus:border-sky-500" />
-              </div>
-              <div>
-                <label class="text-xs uppercase tracking-wide text-slate-400">Código</label>
-                <input name="code" class="mt-1 w-full border border-slate-700 bg-slate-950 rounded-xl px-3 py-2 text-sm outline-none focus:border-sky-500" />
-              </div>
-              <div>
-                <label class="text-xs uppercase tracking-wide text-slate-400">Categoria</label>
-                <input name="category" class="mt-1 w-full border border-slate-700 bg-slate-950 rounded-xl px-3 py-2 text-sm outline-none focus:border-sky-500" />
-              </div>
-              <div>
-                <label class="text-xs uppercase tracking-wide text-slate-400">Localização</label>
-                <input name="location" class="mt-1 w-full border border-slate-700 bg-slate-950 rounded-xl px-3 py-2 text-sm outline-none focus:border-sky-500" />
-              </div>
-              <div>
-                <label class="text-xs uppercase tracking-wide text-slate-400">Quantidade inicial</label>
-                <input type="number" name="qty" value="0" class="mt-1 w-full border border-slate-700 bg-slate-950 rounded-xl px-3 py-2 text-sm outline-none focus:border-sky-500" />
-              </div>
-              <div>
-                <label class="text-xs uppercase tracking-wide text-slate-400">Estoque mínimo</label>
-                <input type="number" name="min" value="0" class="mt-1 w-full border border-slate-700 bg-slate-950 rounded-xl px-3 py-2 text-sm outline-none focus:border-sky-500" />
-              </div>
-              <div class="md:col-span-2">
-                <label class="text-xs uppercase tracking-wide text-slate-400">Imagem do item (opcional)</label>
-                <input type="file" name="image" accept="image/*" class="mt-1 w-full border border-slate-700 bg-slate-950 rounded-xl px-3 py-2 text-sm" />
-              </div>
-              <div class="md:col-span-2 flex justify-end pt-2">
-                <button class="bg-sky-500 hover:bg-sky-400 text-slate-950 font-medium rounded-xl px-5 py-2 text-sm">
-                  Cadastrar
-                </button>
-              </div>
-            </form>
-          </div>
-
-          <!-- TAB: SOLICITAÇÕES -->
-          <div id="sol" class="hidden bg-slate-900/70 border border-slate-800 rounded-2xl p-4">
-            <div class="grid gap-6 lg:grid-cols-3">
-              <div class="lg:col-span-1">
-                <h2 class="font-semibold text-sm sm:text-base mb-3">Nova solicitação</h2>
-                <div class="space-y-3">
-                  <div>
-                    <label class="text-xs uppercase tracking-wide text-slate-400">Item</label>
-                    <select id="selitem" class="mt-1 w-full border border-slate-700 bg-slate-950 rounded-xl px-3 py-2 text-sm outline-none focus:border-sky-500"></select>
-                  </div>
-                  <div>
-                    <label class="text-xs uppercase tracking-wide text-slate-400">Quantidade</label>
-                    <input id="solqty" type="number" min="1" value="1" class="mt-1 w-full border border-slate-700 bg-slate-950 rounded-xl px-3 py-2 text-sm outline-none focus:border-sky-500" />
-                  </div>
-                  <div>
-                    <label class="text-xs uppercase tracking-wide text-slate-400">Observações</label>
-                    <input id="solobs" class="mt-1 w-full border border-slate-700 bg-slate-950 rounded-xl px-3 py-2 text-sm outline-none focus:border-sky-500" placeholder="Setor, urgência..." />
-                  </div>
-                  <button id="solbtn" class="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-medium rounded-xl px-5 py-2 text-sm">
-                    Enviar solicitação
-                  </button>
-                </div>
-              </div>
-              <div class="lg:col-span-2">
-                <div class="flex items-center justify-between mb-3">
-                  <h2 class="font-semibold text-sm sm:text-base">Solicitações</h2>
-                  <span class="text-[11px] text-slate-400">ADMIN / ALMOX aprovam ou recusam</span>
-                </div>
-                <div id="reqlist" class="space-y-3"></div>
-                <div id="reqvazio" class="hidden text-center text-slate-500 text-sm py-8">
-                  Nenhuma solicitação cadastrada.
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- TAB: USUÁRIOS -->
-          <div id="usr" class="hidden bg-slate-900/70 border border-slate-800 rounded-2xl p-4">
-            <div class="grid gap-6 lg:grid-cols-3">
-              <div class="lg:col-span-1">
-                <div class="flex items-center justify-between mb-3">
-                  <h2 class="font-semibold text-sm sm:text-base">Novo usuário</h2>
-                  <span class="text-[11px] text-slate-400">Somente ADMIN</span>
-                </div>
-                <div class="space-y-3">
-                  <div>
-                    <label class="text-xs uppercase tracking-wide text-slate-400">Nome</label>
-                    <input id="uname" class="mt-1 w-full border border-slate-700 bg-slate-950 rounded-xl px-3 py-2 text-sm outline-none focus:border-sky-500" />
-                  </div>
-                  <div>
-                    <label class="text-xs uppercase tracking-wide text-slate-400">Usuário (login)</label>
-                    <input id="uuser" class="mt-1 w-full border border-slate-700 bg-slate-950 rounded-xl px-3 py-2 text-sm outline-none focus:border-sky-500" />
-                  </div>
-                  <div>
-                    <label class="text-xs uppercase tracking-wide text-slate-400">Senha</label>
-                    <input id="upass" type="password" class="mt-1 w-full border border-slate-700 bg-slate-950 rounded-xl px-3 py-2 text-sm outline-none focus:border-sky-500" />
-                  </div>
-                  <div>
-                    <label class="text-xs uppercase tracking-wide text-slate-400">Papel</label>
-                    <select id="urole" class="mt-1 w-full border border-slate-700 bg-slate-950 rounded-xl px-3 py-2 text-sm outline-none focus:border-sky-500">
-                      <option value="ADMIN">ADMIN</option>
-                      <option value="ALMOX">ALMOX</option>
-                      <option value="SOLICITANTE" selected>SOLICITANTE</option>
-                    </select>
-                  </div>
-                  <button id="ucreate" class="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-medium rounded-xl px-5 py-2 text-sm">
-                    Cadastrar usuário
-                  </button>
-                </div>
-              </div>
-              <div class="lg:col-span-2">
-                <h2 class="font-semibold text-sm sm:text-base mb-3">Usuários cadastrados</h2>
-                <div id="userslist" class="space-y-3"></div>
-                <div id="usersvazio" class="hidden text-center text-slate-500 text-sm py-8">
-                  Nenhum usuário cadastrado além do administrador padrão.
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
-    </main>
-
-    <!-- Rodapé -->
-    <footer class="border-t border-slate-900 bg-slate-950/80">
-      <div class="max-w-6xl mx-auto px-4 py-3 text-[11px] text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2">
-        <span>Almoxarifado • v7.8 — protótipo em produção</span>
-        <span>Dados persistidos em banco SQLite no servidor (Render)</span>
-      </div>
-    </footer>
-  </div>
-
-  <script>
-    const $ = (s) => document.querySelector(s);
-    const $$ = (s) => Array.from(document.querySelectorAll(s));
-
-    const API = {
-      async login(username, password) {
-        const r = await fetch("/api/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password }),
-        });
-        if (!r.ok) throw new Error("login");
-        return r.json();
-      },
-      async getItems() { return fetchAuth("/api/items"); },
-      async createItem(fd) {
-        const r = await fetch("/api/items", {
-          method: "POST",
-          headers: { Authorization: tokenHeader() },
-          body: fd,
-        });
-        if (!r.ok) throw new Error("create item");
-        return r.json();
-      },
-      async adjustItem(id, delta) {
-        const r = await fetch("/api/items/" + id + "/adjust", {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: tokenHeader(),
-          },
-          body: JSON.stringify({ delta }),
-        });
-        if (!r.ok) throw new Error("adjust");
-        return r.json();
-      },
-      async getReqs() { return fetchAuth("/api/requests"); },
-      async createReq(payload) {
-        const r = await fetch("/api/requests", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: tokenHeader(),
-          },
-          body: JSON.stringify(payload),
-        });
-        if (!r.ok) throw new Error("req");
-        return r.json();
-      },
-      async approveReq(id) {
-        const r = await fetch("/api/requests/" + id + "/approve", {
-          method: "POST",
-          headers: { Authorization: tokenHeader() },
-        });
-        if (!r.ok) throw new Error("approve");
-        return r.json();
-      },
-      async rejectReq(id) {
-        const r = await fetch("/api/requests/" + id + "/reject", {
-          method: "POST",
-          headers: { Authorization: tokenHeader() },
-        });
-        if (!r.ok) throw new Error("reject");
-        return r.json();
-      },
-      async getUsers() { return fetchAuth("/api/users"); },
-      async createUser(payload) {
-        const r = await fetch("/api/users", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: tokenHeader(),
-          },
-          body: JSON.stringify(payload),
-        });
-        if (!r.ok) throw new Error("create user");
-        return r.json();
-      },
-      async deleteUser(id) {
-        const r = await fetch("/api/users/" + id, {
-          method: "DELETE",
-          headers: { Authorization: tokenHeader() },
-        });
-        if (!r.ok) throw new Error("delete user");
-        return r.json();
-      },
-    };
-
-    function tokenHeader() {
-      return "Bearer " + (localStorage.getItem("token") || "");
-    }
-    async function fetchAuth(url) {
-      const r = await fetch(url, { headers: { Authorization: tokenHeader() } });
-      if (!r.ok) throw new Error("auth");
-      return r.json();
-    }
-
-    let currentUser = null;
-
-    // LOGIN
-    $("#b").addEventListener("click", async () => {
-      try {
-        const { token, user } = await API.login($("#u").value.trim(), $("#p").value.trim());
-        localStorage.setItem("token", token);
-        currentUser = user;
-        $("#e").classList.add("hidden");
-        $("#login").classList.add("hidden");
-        $("#appview").classList.remove("hidden");
-        $("#top-role").textContent = user.role;
-        $("#top-name").textContent = user.name;
-        $("#top-role").classList.remove("hidden");
-        $("#top-name").classList.remove("hidden");
-        $("#btn-logout").classList.remove("hidden");
-        renderAll();
-      } catch (err) {
-        $("#e").classList.remove("hidden");
-      }
-    });
-
-    $("#btn-logout").addEventListener("click", () => {
-      localStorage.removeItem("token");
-      location.reload();
-    });
-
-    // TABS
-    $$(".tab").forEach((btn) =>
-      btn.addEventListener("click", () => {
-        const t = btn.dataset.t;
-        ["itens", "cad", "sol", "usr"].forEach((id) => {
-          document.getElementById(id).classList.toggle("hidden", id !== t);
-        });
-        $$(".tab").forEach((b) =>
-          b.setAttribute("aria-selected", b === btn ? "true" : "false")
-        );
-      })
-    );
-
-    // ITENS
-    async function renderItems() {
-      const items = await API.getItems();
-      const q = ($("#busca").value || "").toLowerCase();
-      const filtered = q
-        ? items.filter((i) =>
-            (i.name || "").toLowerCase().includes(q) ||
-            (i.code || "").toLowerCase().includes(q) ||
-            (i.category || "").toLowerCase().includes(q)
-          )
-        : items;
-
-      const grid = $("#itenslist");
-      grid.innerHTML = "";
-      if (filtered.length === 0) {
-        $("#itensvazio").classList.remove("hidden");
-      } else {
-        $("#itensvazio").classList.add("hidden");
-      }
-
-      filtered.forEach((it) => {
-        const el = document.createElement("div");
-        el.className =
-          "border border-slate-800 bg-slate-950 rounded-2xl p-3 flex flex-col gap-2";
-        el.innerHTML = `
-          <div class="flex items-start justify-between gap-2">
-            <div class="min-w-0">
-              <div class="font-semibold text-sm truncate" title="${it.name}">${it.name}</div>
-              <div class="text-[11px] text-slate-400 mt-0.5">
-                Código: <span class="font-mono">${it.code || "—"}</span>
-              </div>
-            </div>
-            <span class="badge bg-slate-800 text-slate-100">${it.category || "Sem categoria"}</span>
-          </div>
-          ${
-            it.image_url
-              ? `<img src="${it.image_url}" class="w-full h-32 object-cover rounded-xl border border-slate-800" />`
-              : ""
-          }
-          <div class="flex items-center justify-between mt-1">
-            <div class="text-xs text-slate-400">Quantidade</div>
-            <div class="text-2xl font-semibold">${it.qty}</div>
-          </div>
-          <div class="flex items-center justify-between text-[11px] text-slate-400">
-            <div>Min: <span class="font-semibold">${it.min || 0}</span></div>
-            <div>Local: <span class="font-semibold">${it.location || "-"}</span></div>
-          </div>
-          <div class="mt-2 flex gap-2">
-            <button class="btn-in flex-1 border border-slate-700 rounded-xl px-3 py-1 text-xs hover:border-sky-500">
-              Entrada
-            </button>
-            <button class="btn-out flex-1 border border-slate-700 rounded-xl px-3 py-1 text-xs hover:border-red-500">
-              Baixa
-            </button>
-          </div>
-        `;
-        const isAlmox =
-          currentUser && (currentUser.role === "ALMOX" || currentUser.role === "ADMIN");
-        if (!isAlmox) {
-          el.querySelectorAll(".btn-in,.btn-out").forEach((b) =>
-            b.setAttribute("disabled", "true")
-          );
-        } else {
-          el.querySelector(".btn-in").addEventListener("click", async () => {
-            await API.adjustItem(it.id, +1);
-            renderItems();
-            renderSelectForReq();
-          });
-          el.querySelector(".btn-out").addEventListener("click", async () => {
-            const res = await API.adjustItem(it.id, -1);
-            if (res.belowMin) {
-              alert(
-                `⚠️ Estoque do item "${it.name}" ficou abaixo do mínimo (${res.qty} < ${it.min}).`
-              );
-            }
-            renderItems();
-            renderSelectForReq();
-          });
-        }
-        grid.appendChild(el);
-      });
-    }
-    $("#busca").addEventListener("input", () => renderItems());
-
-    // CADASTRO ITEM
-    $("#cadform").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const isAlmox =
-        currentUser && (currentUser.role === "ALMOX" || currentUser.role === "ADMIN");
-      if (!isAlmox) {
-        alert("Apenas ALMOX/ADMIN podem cadastrar itens.");
-        return;
-      }
-
-      try {
-        const fd = new FormData(e.target);
-        await API.createItem(fd);
-        e.target.reset();
-        $$('.tab[data-t="itens"]')[0].click();
-        renderItems();
-        renderSelectForReq();
-      } catch (err) {
-        console.error(err);
-        alert("Erro ao cadastrar item. Veja se os campos estão corretos e tente novamente.");
-      }
-    });
-
-    // SOLICITAÇÕES
-    async function renderSelectForReq() {
-      const items = await API.getItems();
-      const sel = $("#selitem");
-      sel.innerHTML = "";
-      items.forEach((i) => {
-        const o = document.createElement("option");
-        o.value = i.id;
-        o.textContent = `${i.name} (Disp: ${i.qty})`;
-        sel.appendChild(o);
-      });
-    }
-
-    async function renderReqs() {
-      const reqs = await API.getReqs();
-      const list = $("#reqlist");
-      list.innerHTML = "";
-      if (reqs.length === 0) {
-        $("#reqvazio").classList.remove("hidden");
-      } else {
-        $("#reqvazio").classList.add("hidden");
-      }
-
-      reqs.forEach((r) => {
-        const el = document.createElement("div");
-        const pill =
-          r.status === "APROVADA"
-            ? "bg-emerald-500"
-            : r.status === "RECUSADA"
-            ? "bg-red-500"
-            : "bg-amber-500";
-        const label =
-          r.status === "APROVADA"
-            ? "Aprovada"
-            : r.status === "RECUSADA"
-            ? "Recusada"
-            : "Pendente";
-        el.className =
-          "border border-slate-800 bg-slate-950 rounded-2xl p-3 flex flex-col gap-2";
-        el.innerHTML = `
-          <div class="flex items-start justify-between gap-2">
-            <div>
-              <div class="font-semibold text-sm">${r.itemName}</div>
-              <div class="text-[11px] text-slate-400 mt-0.5">
-                Qtd: <span class="font-semibold">${r.qty}</span> • Por: <span class="font-semibold">${r.createdBy}</span>
-              </div>
-              <div class="text-[11px] text-slate-500">
-                Em: ${new Date(r.createdAt).toLocaleString()}
-              </div>
-              <div class="text-[11px] text-slate-400 mt-1">${r.obs || "Sem observações."}</div>
-            </div>
-            <span class="badge ${pill} text-slate-950 font-semibold uppercase">${label}</span>
-          </div>
-          <div class="flex items-center justify-end gap-2 mt-1">
-            <button class="rec border border-slate-700 rounded-xl px-3 py-1 text-xs hover:border-red-500">
-              Recusar
-            </button>
-            <button class="apr bg-sky-500 hover:bg-sky-400 text-slate-950 rounded-xl px-3 py-1 text-xs">
-              Aprovar
-            </button>
-          </div>
-        `;
-        const isAlmox =
-          currentUser && (currentUser.role === "ALMOX" || currentUser.role === "ADMIN");
-        if (!isAlmox || r.status !== "PENDENTE") {
-          el.querySelectorAll(".rec,.apr").forEach((b) =>
-            b.setAttribute("disabled", "true")
-          );
-        } else {
-          el.querySelector(".rec").addEventListener("click", async () => {
-            await API.rejectReq(r.id);
-            renderReqs();
-          });
-          el.querySelector(".apr").addEventListener("click", async () => {
-            const res = await API.approveReq(r.id);
-            if (res.belowMin) {
-              alert(
-                `⚠️ Estoque do item "${r.request.itemName}" ficou abaixo do mínimo (atual: ${res.itemQty}).`
-              );
-            }
-            renderItems();
-            renderReqs();
-            renderSelectForReq();
-          });
-        }
-        list.appendChild(el);
-      });
-    }
-
-    $("#solbtn").addEventListener("click", async () => {
-      const itemId = $("#selitem").value;
-      const qty = Number($("#solqty").value || 1);
-      const obs = $("#solobs").value.trim();
-      await API.createReq({ itemId, qty, obs });
-      $("#solqty").value = 1;
-      $("#solobs").value = "";
-      renderReqs();
-    });
-
-    // USUÁRIOS
-    async function renderUsers() {
-      if (!currentUser || currentUser.role !== "ADMIN") {
-        $("#usr").classList.add("hidden");
-        return;
-      }
-      const users = await API.getUsers();
-      const list = $("#userslist");
-      list.innerHTML = "";
-      if (users.length === 0) {
-        $("#usersvazio").classList.remove("hidden");
-      } else {
-        $("#usersvazio").classList.add("hidden");
-      }
-      users.forEach((u) => {
-        const el = document.createElement("div");
-        el.className =
-          "border border-slate-800 bg-slate-950 rounded-2xl p-3 flex flex-col gap-2";
-        el.innerHTML = `
-          <div class="flex items-start justify-between gap-2">
-            <div>
-              <div class="font-semibold text-sm">${u.name}</div>
-              <div class="text-[11px] text-slate-400">
-                Login: <span class="font-mono">${u.username}</span>
-              </div>
-              <div class="text-[11px] text-slate-500">
-                ID: <span class="font-mono">${u.id.slice(0, 8)}…</span>
-              </div>
-            </div>
-            <span class="badge bg-slate-800 text-slate-100">${u.role}</span>
-          </div>
-          <div class="flex justify-end">
-            <button class="del border border-slate-700 rounded-xl px-3 py-1 text-xs hover:border-red-500">
-              Remover
-            </button>
-          </div>
-        `;
-        el.querySelector(".del").addEventListener("click", async () => {
-          if (
-            !confirm(
-              `Remover o usuário "${u.name}" (login: ${u.username})? Essa ação não pode ser desfeita.`
-            )
-          )
-            return;
-          await API.deleteUser(u.id);
-          renderUsers();
-        });
-        list.appendChild(el);
-      });
-    }
-
-    $("#ucreate").addEventListener("click", async () => {
-      const name = $("#uname").value.trim();
-      const username = $("#uuser").value.trim();
-      const password = $("#upass").value;
-      const role = $("#urole").value;
-      if (!name || !username || !password) {
-        alert("Preencha todos os campos.");
-        return;
-      }
-      await API.createUser({ name, username, password, role });
-      $("#uname").value = "";
-      $("#uuser").value = "";
-      $("#upass").value = "";
-      $("#urole").value = "SOLICITANTE";
-      renderUsers();
-    });
-
-    async function renderAll() {
-      const isAdmin = currentUser.role === "ADMIN";
-      const isAlmox = isAdmin || currentUser.role === "ALMOX";
-
-      if (!isAlmox) {
-        document.querySelector('.tab[data-t="cad"]').style.display = "none";
-      }
-      if (!isAdmin) {
-        document.querySelector('.tab[data-t="usr"]').style.display = "none";
-      }
-
-      document.querySelector('.tab[data-t="itens"]').click();
-      await renderItems();
-      await renderSelectForReq();
-      await renderReqs();
-      await renderUsers();
-    }
-  </script>
+  <script defer src="app.js"></script>
 </body>
 </html>
