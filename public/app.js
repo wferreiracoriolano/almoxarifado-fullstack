@@ -1,208 +1,274 @@
-<!doctype html>
-<html lang="pt-br">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Almoxarifado • v7.8</title>
-  <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-</head>
-<body class="bg-slate-50 text-slate-900">
-  <header class="w-full border-b bg-white/70 backdrop-blur sticky top-0 z-10">
-    <div class="max-w-7xl mx-auto flex items-center justify-between p-3">
-      <div class="text-lg font-semibold">Almoxarifado • <span id="app-ver">v7.8</span></div>
-      <div class="flex items-center gap-2">
-        <span id="badge-role" class="badge text-white bg-slate-900">ROLE</span>
-        <span id="badge-user" class="text-sm">User</span>
-        <button id="btn-logout" class="btn2" type="button">Sair</button>
+
+// Storage keys
+const KEYS={users:'almox_u_v78',session:'almox_s_v78',items:'almox_i_v78',reqs:'almox_r_v78'};
+const get=(k,f)=>{try{return JSON.parse(localStorage.getItem(k))??f;}catch{return f;}};
+const set=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
+
+// Seed
+function seed(){
+  if(!get(KEYS.users,[]).length){
+    set(KEYS.users,[
+      {id:crypto.randomUUID(),name:'Admin',username:'admin',password:'admin',role:'ADMIN'},
+      {id:crypto.randomUUID(),name:'Almox',username:'almox',password:'almox',role:'ALMOX'},
+      {id:crypto.randomUUID(),name:'Solicitante',username:'sol',password:'sol',role:'SOLICITANTE'}
+    ]);
+  }
+  if(!get(KEYS.items,null)) set(KEYS.items,[]);
+  if(!get(KEYS.reqs,null)) set(KEYS.reqs,[]);
+}
+seed();
+
+let state={session:get(KEYS.session,null),users:get(KEYS.users,[]),items:get(KEYS.items,[]),reqs:get(KEYS.reqs,[])};
+function setState(p){
+  state={...state,...p};
+  if(p.users) set(KEYS.users,state.users);
+  if(p.items) set(KEYS.items,state.items);
+  if(p.reqs) set(KEYS.reqs,state.reqs);
+  if(p.session!==undefined){ state.session?set(KEYS.session,state.session):localStorage.removeItem(KEYS.session); }
+  render();
+}
+
+// Login
+$('#btn-login').onclick=()=>{
+  const u=$('#login-user').value.trim(), p=$('#login-pass').value.trim();
+  const me=state.users.find(x=>x.username===u&&x.password===p);
+  if(!me){ $('#login-err').classList.remove('hidden'); return; }
+  $('#login-err').classList.add('hidden'); setState({session:me});
+};
+$('#btn-wipe').onclick=()=>{ Object.values(KEYS).forEach(k=>localStorage.removeItem(k)); location.reload(); };
+$('#btn-logout').onclick=()=>setState({session:null});
+
+function roleClass(r){ return {ADMIN:'bg-purple-600',ALMOX:'bg-blue-600',SOLICITANTE:'bg-green-600'}[r]||'bg-slate-900'; }
+function reqSummary(r){ let d=0,p=0; r.lines.forEach((l,i)=>{ const rec=r.received?.[i]?.receivedQty||0; if(rec>=l.qty) d++; else p++; }); const status=p===0?'CONCLUÍDO':(d>0?'PARCIAL':'PENDENTE'); return {status,delivered:d,pending:p,total:r.lines.length}; }
+
+// Tabs
+function showTab(id){
+  $$('.tab').forEach(b=>b.classList.toggle('active', b.dataset.t===id));
+  ['tab-itens','tab-cad','tab-sol','tab-almox','tab-res','tab-users'].forEach(t=>$('#'+t).classList.add('hidden'));
+  $('#'+id).classList.remove('hidden');
+}
+$$('.tab').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.t)));
+
+function setRoleVisibility(){
+  const isAdmin=state.session.role==='ADMIN';
+  const isAlmox=isAdmin||state.session.role==='ALMOX';
+  // Mostra/esconde apenas botões, não o conteúdo
+  $$('[data-t="tab-cad"]')[0].classList.toggle('hidden',!isAlmox);
+  $$('[data-t="tab-users"]')[0].classList.toggle('hidden',!isAdmin);
+  // Garante que sempre existe uma aba ativa visível
+  if(!$$('.tab.active').length || $$('.tab.active')[0].classList.contains('hidden')) showTab('tab-itens');
+}
+
+function render(){
+  if(!state.session){ $('#view-login').classList.remove('hidden'); $('#view-app').classList.add('hidden'); return; }
+  $('#view-login').classList.add('hidden'); $('#view-app').classList.remove('hidden');
+  $('#badge-user').textContent=state.session.name;
+  const rb=$('#badge-role'); rb.textContent=state.session.role; rb.className='badge text-white '+roleClass(state.session.role);
+  setRoleVisibility();
+  if(!$$('.tab.active').length) showTab('tab-itens');
+  renderItens(); refreshSel(); renderDraft(); renderMine(); renderAlmox(); buildCal(); renderResumo(); renderUsers();
+}
+
+// ITENS
+$('#itens-q').oninput=renderItens;
+function renderItens(){
+  const q=($('#itens-q').value||'').toLowerCase();
+  let its=state.items; if(q) its=its.filter(i=>(i.name||'').toLowerCase().includes(q)||(i.code||'').toLowerCase().includes(q)||(i.unit||'').toLowerCase().includes(q));
+  const grid=$('#itens-list'); grid.innerHTML='';
+  $('#itens-empty').classList.toggle('hidden',its.length>0);
+  its.forEach(it=>{
+    const low=(it.qty||0)<(it.min||0);
+    const el=document.createElement('div'); el.className='card '+(low?'low':'');
+    el.innerHTML=`
+      <div class="flex items-center justify-between mb-1">
+        <div class="font-semibold">${it.name}</div>
+        <span class="badge bg-slate-100 text-slate-800">${it.unit||'—'}</span>
       </div>
-    </div>
-  </header>
-
-  <main class="max-w-7xl mx-auto p-4" id="root">
-    <!-- LOGIN -->
-    <section id="view-login" class="min-h-[70vh] grid place-items-center">
-      <div class="bg-white rounded-2xl shadow w-full max-w-md p-6">
-        <h1 class="text-2xl font-semibold mb-2">Almoxarifado • Login</h1>
-        <p class="text-sm text-slate-500 mb-4">Use <b>admin/admin</b>, <b>almox/almox</b> ou <b>sol/sol</b>.</p>
-        <div class="space-y-3">
-          <div><label class="text-sm">Usuário</label><input id="login-user" class="inp" autocomplete="username"></div>
-          <div><label class="text-sm">Senha</label><input id="login-pass" type="password" class="inp" autocomplete="current-password"></div>
-          <div id="login-err" class="text-red-600 text-sm hidden">Usuário ou senha inválidos.</div>
-          <button id="btn-login" class="btn w-full" type="button">Entrar</button>
-          <button id="btn-wipe" class="btn2 w-full" type="button">Limpar dados (LocalStorage)</button>
-        </div>
+      <div class="text-xs text-slate-500 mb-1">Cód: <span class="font-mono">${it.code||'—'}</span></div>
+      ${it.imageData?`<img src="${it.imageData}" class="w-full h-40 object-cover rounded-lg mb-2">`:''}
+      <div class="text-sm text-slate-600">Estoque: <b>${it.qty||0}</b> • Mín: <b>${it.min||0}</b></div>
+      <div class="grid grid-cols-3 gap-2 mt-2">
+        <input class="inp in" type="number" min="0" value="1">
+        <input class="inp out" type="number" min="0" value="1">
+        ${state.session.role==='ADMIN'?`<input class="inp min" type="number" min="0" value="${it.min||0}" title="Mínimo (ADMIN)">`:''}
       </div>
-    </section>
+      <div class="flex items-center gap-2 mt-2">
+        <button type="button" class="btn2 add">Entrada</button>
+        <button type="button" class="btn2 rem">Baixa</button>
+        ${state.session.role==='ADMIN'?`<button type="button" class="btn2 save">Salvar mín.</button>`:''}
+      </div>`;
+    const inN=el.querySelector('.in'), outN=el.querySelector('.out'), minN=el.querySelector('.min');
+    el.querySelector('.add').onclick=()=>{ const n=Math.max(0,Number(inN.value||0)); setState({items:state.items.map(x=>x.id===it.id?{...x,qty:(x.qty||0)+n}:x)}); };
+    el.querySelector('.rem').onclick=()=>{
+      const n=Math.max(0,Number(outN.value||0)); const after=Math.max(0,(it.qty||0)-n);
+      setState({items:state.items.map(x=>x.id===it.id?{...x,qty:after}:x)});
+      const minV=minN?Number(minN.value||0):(it.min||0); if(after<minV) alert(`⚠️ Estoque de "${it.name}" ficou abaixo do mínimo (${after} < ${minV}).`);
+    };
+    if(state.session.role==='ADMIN' && el.querySelector('.save')) el.querySelector('.save').onclick=()=>{
+      const m=Math.max(0,Number(minN.value||0)); setState({items:state.items.map(x=>x.id===it.id?{...x,min:m}:x)});
+    };
+    grid.appendChild(el);
+  });
+}
 
-    <!-- APP -->
-    <section id="view-app" class="hidden">
-      <!-- NAV -->
-      <nav class="navbar mb-4">
-        <button class="tab navbtn" data-t="tab-itens" type="button">Itens</button>
-        <button class="tab navbtn" data-t="tab-cad" type="button">Cadastrar</button>
-        <button class="tab navbtn" data-t="tab-sol" type="button">Solicitações</button>
-        <button class="tab navbtn" data-t="tab-almox" type="button">Almoxarife</button>
-        <button class="tab navbtn" data-t="tab-res" type="button">Resumo</button>
-        <button class="tab navbtn" data-t="tab-users" type="button">Usuários</button>
-      </nav>
+// CADASTRO
+$('#cad-form').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const fd=new FormData(e.target); const file=fd.get('image');
+  const img=await new Promise((res,rej)=>{ if(!file||!file.size) return res(null); const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); });
+  const it={id:crypto.randomUUID(),name:fd.get('name')||'',code:fd.get('code')||'',unit:fd.get('unit')||'',qty:0,min:0,imageData:img};
+  setState({items:[it,...state.items]});
+  e.target.reset();
+  showTab('tab-itens');
+});
 
-      <!-- ITENS -->
-      <section id="tab-itens" class="card hidden">
-        <div class="flex items-center justify-between mb-3">
-          <input id="itens-q" class="inp max-w-md" placeholder="Buscar insumo/código/unidade">
-          <div class="text-xs text-slate-500">* Caixa fica vermelha quando estoque &lt; mínimo.</div>
-        </div>
-        <div id="itens-list" class="grid md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
-        <div id="itens-empty" class="muted hidden">Nenhum item.</div>
-      </section>
+// SOLICITAÇÕES
+let draft=[];
+function refreshSel(){ const sel=$('#s-item'); sel.innerHTML=''; state.items.forEach(i=>{ const o=document.createElement('option'); o.value=i.id; o.textContent=i.name; sel.appendChild(o); }); fillSel(); }
+function fillSel(){ const id=$('#s-item').value; const it=state.items.find(x=>x.id===id); $('#s-code').value=it?it.code:''; $('#s-unit').value=it?it.unit:''; $('#s-stock').value=it?it.qty||0:0; $('#s-photo').innerHTML=it&&it.imageData?`<img src="${it.imageData}" class="h-20 rounded">`:'Sem foto'; }
+document.addEventListener('change',e=>{ if(e.target.id==='s-item') fillSel(); });
+['s-qt','s-vu'].forEach(id=>$('#'+id).oninput=()=>{ const qt=Number($('#s-qt').value||0), vu=Number($('#s-vu').value||0); $('#s-total').value=(qt*vu).toFixed(2); });
+$('#s-add').onclick=()=>{ const id=$('#s-item').value; if(!id) return; const it=state.items.find(x=>x.id===id); const l={id:crypto.randomUUID(),itemId:id,name:it?it.name:'',code:it?it.code:'',unit:it?it.unit:'',photo:it?it.imageData:null,qty:Number($('#s-qt').value||0),unitPrice:Number($('#s-vu').value||0)}; l.total=l.qty*l.unitPrice; draft=[...draft,l]; renderDraft(); };
+function renderDraft(){ const list=$('#s-list'); list.innerHTML=''; if(!draft.length){ $('#s-empty').classList.remove('hidden'); return;} $('#s-empty').classList.add('hidden'); draft.forEach(l=>{ const el=document.createElement('div'); el.className='card'; el.innerHTML=`<div class="flex items-center justify-between"><div class="flex items-center gap-2">${l.photo?`<img src="${l.photo}" class="w-10 h-10 rounded">`:''}<div><div class="font-semibold">${l.name}</div><div class="text-xs text-slate-500">Cód:${l.code||'—'} • Und:${l.unit||'—'}</div></div></div><div class="text-right text-sm">Qtd:<b>${l.qty}</b> • VU:<b>R$ ${l.unitPrice.toFixed(2)}</b><br>Total:<b>R$ ${l.total.toFixed(2)}</b></div></div><div class="flex justify-end mt-2"><button class="btn2 rm" type="button">Remover</button></div>`; el.querySelector('.rm').onclick=()=>{ draft=draft.filter(x=>x.id!==l.id); renderDraft(); }; list.appendChild(el); }); }
+$('#s-save').onclick=()=>{ if(!draft.length) return alert('Adicione materiais.'); const head={pedido:$('#s-pedido').value.trim(),linha:$('#s-linha').value.trim(),fornecedor:$('#s-forn').value.trim(),marca:$('#s-marca').value.trim(),createdBy:state.session.name,createdAt:new Date().toISOString()}; const received=draft.map(()=>({receivedQty:0,received:false,notes:''})); const req={id:crypto.randomUUID(),header:head,lines:draft,deliveryDate:null,received,status:'PENDENTE'}; setState({reqs:[req,...state.reqs]}); draft=[]; renderDraft(); $('#s-pedido').value=$('#s-linha').value=$('#s-forn').value=$('#s-marca').value=''; renderMine(); renderAlmox(); buildCal(); renderResumo(); alert('Solicitação salva!'); };
+// PDF helpers (layout 6.2)
+function pdfHeader(doc, title){ const w=doc.internal.pageSize.getWidth(); let y=40; doc.setFontSize(16); doc.text(title,40,y); y+=14; doc.setFontSize(9); const left=`Data: ${new Date().toLocaleString('pt-BR')}`; const right=`Solicitante: ${state.session?.name||'-'}`; doc.text(left,40,y); doc.text(right,w-40-doc.getTextWidth(right),y); return y+16; }
+function pdfFooter(doc){ const w=doc.internal.pageSize.getWidth(); const h=doc.internal.pageSize.getHeight(); const pc=doc.getNumberOfPages(); for(let i=1;i<=pc;i++){ doc.setPage(i); doc.setFontSize(8); doc.text(`Página ${i} de ${pc}`, w-80, h-20);} }
+function pdfTable(doc,y,rows,cols){ cols = cols || [
+    {k:'idx', t:'#', w:24},
+    {k:'name', t:'Item', w:210},
+    {k:'code', t:'Cód', w:70},
+    {k:'unit', t:'Un', w:26},
+    {k:'qty', t:'Qtde', w:40, r:true},
+    {k:'unitPrice', t:'V.U.', w:60, r:true, fmt:v=>`R$ ${Number(v||0).toFixed(2)}`},
+    {k:'total', t:'Total', w:70, r:true, fmt:v=>`R$ ${Number(v||0).toFixed(2)}`},
+    {k:'received', t:'Receb', w:42, r:true},
+    {k:'left', t:'Falta', w:42, r:true},
+    {k:'notes', t:'Obs', w:120},
+  ]; const x0=40; let x=x0; doc.setFontSize(9); cols.forEach(c=>{ doc.text(c.t, x+2, y); x+=c.w; }); y+=6; doc.setDrawColor(200); doc.line(x0,y,x0+cols.reduce((a,c)=>a+c.w,0), y); y+=8; rows.forEach(r=>{ x=x0; cols.forEach(c=>{ const raw=r[c.k]; const val=c.fmt?c.fmt(raw):(raw==null?'':String(raw)); if(c.r){ const tw=doc.getTextWidth(val); doc.text(val, x+c.w-2-tw, y); } else { doc.text(val, x+2, y);} x+=c.w;}); y+=14; if(y>doc.internal.pageSize.getHeight()-40){ doc.addPage(); y=40; } }); return y; }
+// PDFs
+$('#s-pdf').onclick=()=>{ if(!draft.length) return alert('Adicione materiais.'); const {jsPDF}=window.jspdf; const doc=new jsPDF({unit:'pt',format:'a4'}); let y=pdfHeader(doc,'Pedido (Rascunho)'); const rows=draft.map((l,i)=>({idx:i+1,name:l.name,code:l.code||'',unit:l.unit||'',qty:l.qty,unitPrice:l.unitPrice,total:l.total,received:0,left:l.qty,notes:''})); y=pdfTable(doc,y,rows); pdfFooter(doc); doc.save('rascunho.pdf'); };
+function downloadReqPDF(r){ const {jsPDF}=window.jspdf; const doc=new jsPDF({unit:'pt',format:'a4'}); let y=pdfHeader(doc,'Pedido de Material'); doc.setFontSize(10); const meta=`Pedido: ${r.header.pedido||'-'}    Fornecedor: ${r.header.fornecedor||'-'}    Marca: ${r.header.marca||'-'}    Entrega: ${r.deliveryDate?new Date(r.deliveryDate).toLocaleDateString():'(definir)'}`; doc.text(meta,40,y); y+=14; const rows=r.lines.map((l,i)=>{ const rec=(r.received&&r.received[i]?r.received[i].receivedQty:0)||0; return {idx:i+1,name:l.name,code:l.code||'',unit:l.unit||'',qty:l.qty,unitPrice:l.unitPrice||0,total:(l.qty||0)*(l.unitPrice||0),received:rec,left:Math.max(0,(l.qty||0)-rec),notes:(r.received&&r.received[i]?r.received[i].notes||'':'')};}); y=pdfTable(doc,y,rows); const tot=rows.reduce((a,b)=>a+Number(b.total||0),0); doc.setFontSize(11); doc.text(`Total geral: R$ ${tot.toFixed(2)}`,40,y+10); pdfFooter(doc); doc.save(`solicitacao-${r.header.pedido||r.id}.pdf`); }
+$('#s-pdf-all').onclick=()=>{ const mine=state.reqs.filter(r=>r.header.createdBy===state.session.name); if(!mine.length) return alert('Sem solicitações.'); const {jsPDF}=window.jspdf; const doc=new jsPDF({unit:'pt',format:'a4'}); let y=pdfHeader(doc,'Minhas Solicitações'); mine.forEach(r=>{ doc.setFontSize(11); doc.text(`• Pedido: ${r.header.pedido||'-'}  • Fornecedor: ${r.header.fornecedor||'-'}  • Marca: ${r.header.marca||'-'}`,40,y); y+=12; const rows=r.lines.map((l,i)=>{ const rec=(r.received&&r.received[i]?r.received[i].receivedQty:0)||0; return {idx:i+1,name:l.name,code:l.code||'',unit:l.unit||'',qty:l.qty,unitPrice:l.unitPrice||0,total:(l.qty||0)*(l.unitPrice||0),received:rec,left:Math.max(0,(l.qty||0)-rec),notes:''};}); y=pdfTable(doc,y,rows); y+=6; if(y>doc.internal.pageSize.getHeight()-60){ doc.addPage(); y=40; } }); pdfFooter(doc); doc.save('minhas-solicitacoes.pdf'); };
 
-      <!-- CADASTRO -->
-      <section id="tab-cad" class="card hidden">
-        <h2 class="title">Cadastrar Insumo</h2>
-        <form id="cad-form" class="grid md:grid-cols-2 gap-3">
-          <div class="md:col-span-2"><label class="text-sm">Nome Insumo</label><input name="name" class="inp" required></div>
-          <div><label class="text-sm">Cód. Material</label><input name="code" class="inp"></div>
-          <div><label class="text-sm">Unidade</label><input name="unit" class="inp" placeholder="ex: un, cx, kg, m"></div>
-          <div class="md:col-span-2"><label class="text-sm">Inserir Foto</label><input name="image" type="file" accept="image/*" class="inp"></div>
-          <div class="md:col-span-2 flex justify-end"><button class="btn" type="submit">Cadastrar</button></div>
-        </form>
-      </section>
+$('#s-q').oninput=renderMine;
+function renderMine(){ const list=$('#s-me'); list.innerHTML=''; const q=($('#s-q').value||'').toLowerCase(); const mine=state.reqs.filter(r=>r.header.createdBy===state.session.name).filter(r=>[r.header.pedido||'',r.header.fornecedor||'',r.header.marca||'',r.header.linha||''].join(' ').toLowerCase().includes(q)); $('#s-me-empty').classList.toggle('hidden',mine.length>0); mine.forEach(r=>{ const sum=reqSummary(r); const tot=r.lines.reduce((a,b)=>a+(b.qty*b.unitPrice||0),0); const pill=sum.status==='PENDENTE'?'pill-red':sum.status==='PARCIAL'?'pill-amber':'pill-green'; const el=document.createElement('div'); el.className='card'; el.innerHTML=`<div class="flex items-center justify-between"><div><div class="font-semibold">Pedido: ${r.header.pedido||'—'} <span class="pill ${pill}">${sum.status}</span></div><div class="text-sm text-slate-500">Forn: ${r.header.fornecedor||'—'} • Marca: ${r.header.marca||'—'} • Linha: ${r.header.linha||'—'}</div><div class="text-xs text-slate-500 mt-1">Entregues: ${sum.delivered}/${sum.total} • Pendentes: ${sum.pending}</div></div><div class="text-right text-sm">Total: <b>R$ ${tot.toFixed(2)}</b><br>Entrega: ${r.deliveryDate?new Date(r.deliveryDate).toLocaleDateString():'(definir)'}<br><button class="btn2 pdf mt-2" type="button">Baixar PDF</button></div></div>`; el.querySelector('.pdf').onclick=()=>downloadReqPDF(r); list.appendChild(el); }); }
 
-      <!-- SOLICITAÇÕES -->
-      <section id="tab-sol" class="card hidden">
-        <div class="grid lg:grid-cols-3 gap-4">
-          <div>
-            <h2 class="title">Nova Solicitação</h2>
-            <div class="space-y-3 mb-3">
-              <input id="s-pedido" class="inp" placeholder="Pedido (ex: 2025-0001)">
-              <input id="s-linha" class="inp" placeholder="Linha">
-              <input id="s-forn" class="inp" placeholder="Fornecedor">
-              <input id="s-marca" class="inp" placeholder="Marca">
-            </div>
-            <div class="box">
-              <label class="text-sm">Nome Insumo</label>
-              <select id="s-item" class="inp"></select>
-              <div class="grid grid-cols-3 gap-2 text-sm mt-2">
-                <input id="s-code" class="inp" readonly>
-                <input id="s-unit" class="inp" readonly>
-                <input id="s-stock" class="inp" readonly>
-              </div>
-              <div id="s-photo" class="text-xs text-slate-500 mt-2">Sem foto</div>
-              <div class="grid grid-cols-3 gap-2 mt-2">
-                <input id="s-qt" type="number" min="1" value="1" class="inp">
-                <input id="s-vu" type="number" min="0" step="0.01" value="0" class="inp">
-                <input id="s-total" class="inp" readonly>
-              </div>
-              <button id="s-add" class="btn w-full mt-2" type="button">Adicionar material</button>
-            </div>
-          </div>
-          <div class="lg:col-span-2">
-            <div class="flex items-center justify-between">
-              <h3 class="font-semibold mb-2">Materiais adicionados</h3>
-              <button id="s-pdf" class="btn2" type="button">Baixar PDF (rascunho)</button>
-            </div>
-            <div id="s-list" class="space-y-3"></div>
-            <div id="s-empty" class="muted">Nenhum material.</div>
-            <div class="flex justify-end mt-3"><button id="s-save" class="btn" type="button">Salvar solicitação</button></div>
-            <hr class="my-6">
-            <div class="flex items-center justify-between">
-              <h3 class="font-semibold">Minhas solicitações</h3>
-              <input id="s-q" class="inp text-sm" placeholder="Buscar por pedido/fornecedor/marca">
-            </div>
-            <div id="s-me" class="space-y-3"></div>
-            <div id="s-me-empty" class="muted hidden">Nenhuma solicitação.</div>
-            <div class="flex justify-end mt-3"><button id="s-pdf-all" class="btn2" type="button">Baixar PDF (todas)</button></div>
-          </div>
-        </div>
-      </section>
+// ALMOX + calendário
+let calRef=new Date();
+function buildCal(){ const y=calRef.getFullYear(), m=calRef.getMonth(); const first=new Date(y,m,1).getDay(); const total=new Date(y,m+1,0).getDate(); $('#c-title').textContent=calRef.toLocaleString('pt-BR',{month:'long',year:'numeric'}); const body=$('#c-body'); body.innerHTML=''; let d=1; const map={}; state.reqs.forEach(r=>{ if(!r.deliveryDate) return; const st=reqSummary(r).status; const key=r.deliveryDate.substring(0,10); const val=(st==='PENDENTE')?'PENDENTE':(st==='PARCIAL'?'PARCIAL':'CONCLUÍDO'); if(!map[key] || map[key]==='CONCLUÍDO' || (map[key]==='PARCIAL' && val==='PENDENTE')) map[key]=val; }); for(let r=0;r<6;r++){ const tr=document.createElement('tr'); for(let c=0;c<7;c++){ const td=document.createElement('td'); td.className='border'; if((r===0&&c<first)||d>total){ tr.appendChild(td); continue;} td.textContent=d; const key=new Date(y,m,d).toISOString().substring(0,10); const st=map[key]; if(st){ const color=st==='PENDENTE'?'bg-red-600':(st==='PARCIAL'?'bg-amber-600':'bg-green-600'); const dot=document.createElement('span'); dot.className='inline-block w-2 h-2 rounded-full ml-1 '+color; td.appendChild(dot); td.style.cursor='pointer'; td.onclick=()=>showDay(key);} tr.appendChild(td); d++; } body.appendChild(tr);} }
+function showDay(key){ const box=$('#c-day'); box.innerHTML=`<div class="font-semibold mb-1">Programação em ${new Date(key).toLocaleDateString()}</div>`; const rows=state.reqs.filter(r=>r.deliveryDate && r.deliveryDate.substring(0,10)===key); if(!rows.length){ box.innerHTML+='<div class="muted">Nada programado.</div>'; return;} rows.forEach(r=>{ const sum=reqSummary(r); const pill=sum.status==='PENDENTE'?'pill-red':sum.status==='PARCIAL'?'pill-amber':'pill-green'; const div=document.createElement('div'); div.className='card text-sm mb-2'; div.innerHTML=`<div class="font-medium">Pedido ${r.header.pedido||'—'} • ${r.header.fornecedor||'—'} <span class="pill ${pill}">${sum.status}</span></div>`; box.appendChild(div); }); }
+$('#c-prev').onclick=()=>{ calRef.setMonth(calRef.getMonth()-1); buildCal(); }; $('#c-next').onclick=()=>{ calRef.setMonth(calRef.getMonth()+1); buildCal(); };
+function renderAlmox(){ const list=$('#a-list'); list.innerHTML=''; const rows=state.reqs.filter(r=>reqSummary(r).status!=='CONCLUÍDO'); $('#a-empty').classList.toggle('hidden',rows.length>0); rows.forEach(r=>{ const sum=reqSummary(r); const pill=sum.status==='PENDENTE'?'pill-red':'pill-amber'; const card=document.createElement('div'); card.className='card text-sm'; card.innerHTML=`<div class="flex items-center justify-between mb-2"><div><div class="font-semibold">Pedido: ${r.header.pedido||'—'} • ${r.header.fornecedor||'—'} <span class="pill ${pill}">${sum.status}</span></div><div class="text-slate-500">Itens:${sum.total} • Entregues:${sum.delivered} • Pendentes:${sum.pending}</div></div><div>Entrega: <b>${r.deliveryDate?new Date(r.deliveryDate).toLocaleDateString():'—'}</b></div></div><div class="grid md:grid-cols-2 gap-2 mb-2"><input type="date" class="inp a-date"><select class="inp a-status"><option>PENDENTE</option><option>PARCIAL</option><option>CONCLUÍDO</option></select></div><div class="space-y-2">${r.lines.map((l,i)=>{ const rec=r.received?.[i]?.receivedQty||0; const pend=Math.max(0,l.qty-rec); if(pend<=0) return ''; return `<div class="border rounded-lg p-2"><div class="font-medium">${l.name}</div><div class="text-slate-500">Sol:${l.qty} • Rec:${rec} • Falta:${pend}</div><div class="grid grid-cols-3 gap-2 mt-1"><input class="inp a-qty" type="number" min="0" max="${pend}" value="0"><label class="text-xs flex items-center gap-2"><input type="checkbox" class="a-done"> Marcar como entregue</label></div><textarea class="inp a-notes text-xs" placeholder="Observações"></textarea></div>`; }).join('')}</div><div class="flex justify-end mt-2"><button class="btn a-save" type="button">Salvar atualização</button></div>`; const d=card.querySelector('.a-date'); if(r.deliveryDate) d.value=new Date(r.deliveryDate).toISOString().substring(0,10); const s=card.querySelector('.a-status'); s.value=r.status||sum.status; card.querySelector('.a-save').onclick=()=>{ const dateVal=d.value?new Date(d.value).toISOString():null; const statusSel=s.value; const qtys=card.querySelectorAll('.a-qty'); const dones=card.querySelectorAll('.a-done'); const notes=card.querySelectorAll('.a-notes'); let anyPending=false, anyDelivered=false, idx=0; r.lines.forEach((l,i)=>{ const rec=r.received?.[i]?.receivedQty||0; const pend=Math.max(0,l.qty-rec); if(pend<=0) return; const q=Math.max(0,Number(qtys[idx].value||0)); const mark=dones[idx].checked; const add=mark?pend:q; const newRec=rec+add; if(newRec>=l.qty) anyDelivered=true; else anyPending=true; state.reqs=state.reqs.map(xx=>{ if(xx.id!==r.id) return xx; const rc=[...(xx.received||[])]; rc[i]={receivedQty:newRec,received:newRec>=l.qty,notes:notes[idx].value||''}; return {...xx, received:rc}; }); state.items=state.items.map(it=> it.id===l.itemId ? {...it, qty:(it.qty||0)+q} : it); idx++; }); let finalStatus; if(!anyPending){finalStatus='CONCLUÍDO';} else if(anyDelivered){finalStatus='PARCIAL';} else {finalStatus='PENDENTE';} if(statusSel==='CONCLUÍDO' && anyPending) finalStatus='PARCIAL'; setState({ items:state.items, reqs:state.reqs.map(x=>x.id===r.id?{...x,deliveryDate:dateVal,status:finalStatus}:x) }); buildCal(); renderAlmox(); renderResumo(); renderItens(); renderMine(); alert('Atualizado.'); }; list.appendChild(card); }); }
 
-      <!-- ALMOX -->
-      <section id="tab-almox" class="card hidden">
-        <div class="grid lg:grid-cols-3 gap-4">
-          <div>
-            <h2 class="title">Calendário</h2>
-            <div class="flex items-center gap-2 mb-2">
-              <button id="c-prev" class="btn2" type="button">&larr;</button>
-              <div id="c-title" class="font-semibold"></div>
-              <button id="c-next" class="btn2" type="button">&rarr;</button>
-            </div>
-            <table class="calendar w-full border text-sm">
-              <thead><tr class="text-slate-500"><th>Dom</th><th>Seg</th><th>Ter</th><th>Qua</th><th>Qui</th><th>Sex</th><th>Sáb</th></tr></thead>
-              <tbody id="c-body"></tbody>
-            </table>
-            <div class="text-xs mt-2 flex items-center gap-4">
-              <span><span class="dot bg-red-600"></span> Pendente</span>
-              <span><span class="dot bg-amber-600"></span> Parcial</span>
-              <span><span class="dot bg-green-600"></span> Concluído</span>
-            </div>
-            <div id="c-day" class="mt-3 text-sm"></div>
-          </div>
-          <div class="lg:col-span-2">
-            <h2 class="title">Acompanhar Solicitações</h2>
-            <div id="a-list" class="space-y-3"></div>
-            <div id="a-empty" class="muted">Nenhuma solicitação pendente.</div>
-          </div>
-        </div>
-      </section>
+// RESUMO + busca
+$('#r-q').oninput=renderResumo;
+function renderResumo(){
+  const q=($('#r-q').value||'').toLowerCase();
+  const pend=$('#r-pend'); pend.innerHTML='';
+  const done=$('#r-done'); done.innerHTML='';
+  const filterRows = rows => rows.filter(r=>[r.header.pedido||'',r.header.fornecedor||'',r.header.marca||'',r.header.linha||''].join(' ').toLowerCase().includes(q));
+  const pendRows=filterRows(state.reqs.filter(r=>reqSummary(r).status!=='CONCLUÍDO'));
+  const doneRows=filterRows(state.reqs.filter(r=>reqSummary(r).status==='CONCLUÍDO'));
+  $('#r-pend-empty').classList.toggle('hidden',pendRows.length>0);
+  $('#r-done-empty').classList.toggle('hidden',doneRows.length>0);
 
-      <!-- RESUMO -->
-      <section id="tab-res" class="card hidden">
-        <div class="flex items-center justify-between mb-2">
-          <h2 class="title">Resumo</h2>
+  pendRows.forEach(r=>{
+    const sum=reqSummary(r); const pill=sum.status==='PENDENTE'?'pill-red':'pill-amber';
+    const el=document.createElement('div'); el.className='card text-sm';
+    el.innerHTML=`<div class="flex items-center justify-between"><div><b>${r.header.pedido||'—'}</b> • ${r.header.fornecedor||'—'} <span class="pill ${pill}">${sum.status}</span></div><div>Entrega: ${r.deliveryDate?new Date(r.deliveryDate).toLocaleDateString():'—'}</div></div>`;
+    const lines=document.createElement('div'); lines.className='mt-1 text-xs text-slate-600';
+    r.lines.forEach((l,i)=>{ const rec=r.received?.[i]?.receivedQty||0; const falta=Math.max(0,l.qty-rec); lines.innerHTML+=`<div>• ${l.name}: solicitado ${l.qty} • recebido ${rec} • falta ${falta}</div>`; });
+    el.appendChild(lines); pend.appendChild(el);
+  });
+
+  doneRows.forEach(r=>{
+    const el=document.createElement('div'); el.className='card text-sm';
+    el.innerHTML=`<div class="flex items-center justify-between"><div><b>${r.header.pedido||'—'}</b> • ${r.header.fornecedor||'—'} <span class="pill pill-green">CONCLUÍDO</span></div><div>Entrega: ${r.deliveryDate?new Date(r.deliveryDate).toLocaleDateString():'—'}</div></div>`;
+    const lines=document.createElement('div'); lines.className='mt-1 text-xs text-slate-600';
+    r.lines.forEach((l,i)=>{ const rec=r.received?.[i]?.receivedQty||0; const falta=Math.max(0,l.qty-rec); lines.innerHTML+=`<div>• ${l.name}: solicitado ${l.qty} • recebido ${rec} • falta ${falta}</div>`; });
+    el.appendChild(lines);
+    if(state.session.role==='ADMIN'){
+      const btn=document.createElement('button'); btn.className='btn2 mt-2'; btn.textContent='Reverter para não entregue'; btn.type='button';
+      btn.onclick=()=>{ setState({ reqs: state.reqs.map(x=> x.id===r.id ? {...x, received:x.lines.map(()=>({receivedQty:0,received:false,notes:''})), status:'PENDENTE'} : x ) }); buildCal(); renderResumo(); renderAlmox(); renderMine(); };
+      el.appendChild(btn);
+    }
+    done.appendChild(el);
+  });
+
+  const box=$('#r-tot'); box.innerHTML='';
+  const agg={};
+  state.reqs.forEach(r=> r.lines.forEach((l,i)=>{
+    const rec=r.received?.[i]?.receivedQty||0; const falta=Math.max(0,l.qty-rec);
+    if(!agg[l.itemId]) agg[l.itemId]={name:l.name,unit:l.unit,rec:0,falta:0};
+    agg[l.itemId].rec+=rec; agg[l.itemId].falta+=falta;
+  }));
+  Object.values(agg).forEach(v=>{
+    const row=document.createElement('div'); row.textContent=`${v.name} (${v.unit||'—'}) • Entregue: ${v.rec} • Pendente: ${v.falta}`;
+    box.appendChild(row);
+  });
+}
+
+$('#r-pdf').onclick=()=>{
+  const {jsPDF}=window.jspdf; const doc=new jsPDF({unit:'pt',format:'a4'}); let y=pdfHeader(doc,'Resumo Geral');
+  const sections=[{title:'Pendentes/Parciais',rows:state.reqs.filter(r=>reqSummary(r).status!=='CONCLUÍDO')},{title:'Concluídas',rows:state.reqs.filter(r=>reqSummary(r).status==='CONCLUÍDO')}];
+  sections.forEach(sec=>{ doc.setFontSize(12); doc.text(sec.title,40,y); y+=14; sec.rows.forEach(r=>{ const rows=r.lines.map((l,i)=>{ const rec=(r.received&&r.received[i]?r.received[i].receivedQty:0)||0; return {idx:i+1,name:l.name,code:l.code||'',unit:l.unit||'',qty:l.qty,unitPrice:l.unitPrice||0,total:(l.qty||0)*(l.unitPrice||0),received:rec,left:Math.max(0,(l.qty||0)-rec),notes:''};}); y=pdfTable(doc,y,rows); y+=6; if(y>doc.internal.pageSize.getHeight()-60){ doc.addPage(); y=40; } }); y+=6; }); pdfFooter(doc); doc.save('resumo-geral.pdf'); };
+
+// Users
+$('#u-create').onclick=()=>{
+  if(state.session.role!=='ADMIN') return alert('Apenas ADMIN.');
+  const name=$('#u-name').value.trim(), username=$('#u-username').value.trim(), password=$('#u-password').value, role=$('#u-role').value;
+  if(!name||!username||!password) return alert('Preencha tudo.');
+  if(state.users.some(u=>u.username===username)) return alert('Login já existe.');
+  setState({users:[{id:crypto.randomUUID(),name,username,password,role},...state.users]});
+  $('#u-name').value=$('#u-username').value=$('#u-password').value=''; $('#u-role').value='SOLICITANTE'; renderUsers();
+};
+
+function renderUsers(){
+  const list=$('#u-list'); list.innerHTML='';
+  $('#u-empty').classList.toggle('hidden',state.users.length>0);
+  const isAdmin=state.session.role==='ADMIN';
+  state.users.forEach(u=>{
+    const el=document.createElement('div'); el.className='card text-sm';
+    if(isAdmin){
+      el.innerHTML=`
+        <div class="flex items-center justify-between gap-3">
           <div class="flex items-center gap-2">
-            <input id="r-q" class="inp text-sm w-64" placeholder="Buscar (pedido/fornecedor/marca)">
-            <button id="r-pdf" class="btn2" type="button">Baixar PDF Geral</button>
+            <b>${u.name}</b>
+            <span class="badge text-white ${roleClass(u.role)}">${u.role}</span>
+            <span class="text-slate-500">login: <b class="font-mono">${u.username}</b></span>
           </div>
-        </div>
-        <div class="text-xs mb-3 flex items-center gap-4">
-          <span><span class="pill pill-red">PENDENTE</span></span>
-          <span><span class="pill pill-amber">PARCIAL</span></span>
-          <span><span class="pill pill-green">CONCLUÍDO</span></span>
-        </div>
-        <div class="grid lg:grid-cols-2 gap-4">
-          <div>
-            <h3 class="font-semibold mb-2">Pendentes / Parciais</h3>
-            <div id="r-pend" class="space-y-2"></div>
-            <div id="r-pend-empty" class="muted">Nenhuma pendência.</div>
-          </div>
-          <div>
-            <h3 class="font-semibold mb-2">Concluídas</h3>
-            <div id="r-done" class="space-y-2"></div>
-            <div id="r-done-empty" class="muted">Nada concluído ainda.</div>
-          </div>
-        </div>
-        <hr class="my-6">
-        <h3 class="font-semibold mb-2">Totais por Item</h3>
-        <div id="r-tot" class="space-y-1 text-sm"></div>
-      </section>
-
-      <!-- USERS -->
-      <section id="tab-users" class="card hidden">
-        <div class="grid lg:grid-cols-3 gap-4">
-          <div>
-            <h2 class="title">Novo Usuário</h2>
-            <input id="u-name" class="inp" placeholder="Nome">
-            <input id="u-username" class="inp" placeholder="Usuário">
-            <input id="u-password" type="password" class="inp" placeholder="Senha">
-            <select id="u-role" class="inp">
-              <option value="ADMIN">ADMIN</option>
-              <option value="ALMOX">ALMOX</option>
-              <option value="SOLICITANTE" selected>SOLICITANTE</option>
+          <div class="flex items-center gap-2">
+            <select class="inp u-role" style="width:170px">
+              <option value="ADMIN"${u.role==='ADMIN'?' selected':''}>ADMIN</option>
+              <option value="ALMOX"${u.role==='ALMOX'?' selected':''}>ALMOX</option>
+              <option value="SOLICITANTE"${u.role==='SOLICITANTE'?' selected':''}>SOLICITANTE</option>
             </select>
-            <button id="u-create" class="btn mt-2" type="button">Cadastrar</button>
-            <div class="text-xs text-slate-500 mt-3">Logins padrão: <b>admin/admin</b>, <b>almox/almox</b>, <b>sol/sol</b>.</div>
+            <button type="button" class="btn2 u-save">Salvar</button>
+            <button type="button" class="btn2 u-del">Excluir</button>
           </div>
-          <div class="lg:col-span-2">
-            <div id="u-list" class="space-y-2"></div>
-            <div id="u-empty" class="muted hidden">Nenhum usuário.</div>
-          </div>
-        </div>
-      </section>
-    </section>
-  </main>
+        </div>`;
+      el.querySelector('.u-save').onclick=()=>{
+        const newRole=el.querySelector('.u-role').value;
+        const admins=state.users.filter(x=>x.role==='ADMIN');
+        if(u.role==='ADMIN' && admins.length===1 && newRole!=='ADMIN'){ alert('Não é possível remover o último ADMIN.'); el.querySelector('.u-role').value='ADMIN'; return; }
+        setState({users: state.users.map(x=>x.id===u.id?{...x,role:newRole}:x)});
+        if(state.session.id===u.id) setState({session:{...state.session,role:newRole}});
+        alert('Função atualizada!');
+      };
+      el.querySelector('.u-del').onclick=()=>{
+        if(state.session.id===u.id) return alert('Você não pode excluir a si mesmo.');
+        const admins=state.users.filter(x=>x.role==='ADMIN');
+        if(u.role==='ADMIN' && admins.length===1){ alert('Não é possível excluir o último ADMIN.'); return; }
+        if(confirm(`Excluir o usuário "${u.name}"?`)){ setState({users: state.users.filter(x=>x.id!==u.id)}); alert('Usuário excluído.'); }
+      };
+    } else {
+      el.innerHTML=`<div class="flex items-center justify-between"><div class="flex items-center gap-2"><b>${u.name}</b><span class="badge text-white ${roleClass(u.role)}">${u.role}</span></div><div class="text-slate-500">login: <b class="font-mono">${u.username}</b></div></div>`;
+    }
+    list.appendChild(el);
+  });
+}
 
-  <script defer src="app.js"></script>
-</body>
-</html>
+// Start
+render();
