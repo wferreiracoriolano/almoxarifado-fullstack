@@ -461,27 +461,27 @@
     $("#busca").addEventListener("input", () => renderItems());
 
     // CADASTRO ITEM
-$("#cadform").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const isAlmox =
-    currentUser && (currentUser.role === "ALMOX" || currentUser.role === "ADMIN");
-  if (!isAlmox) {
-    alert("Apenas ALMOX/ADMIN podem cadastrar itens.");
-    return;
-  }
+    $("#cadform").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const isAlmox =
+        currentUser && (currentUser.role === "ALMOX" || currentUser.role === "ADMIN");
+      if (!isAlmox) {
+        alert("Apenas ALMOX/ADMIN podem cadastrar itens.");
+        return;
+      }
 
-  try {
-    const fd = new FormData(e.target);
-    await API.createItem(fd);
-    e.target.reset();
-    $$('.tab[data-t="itens"]')[0].click();
-    renderItems();
-    renderSelectForReq();
-  } catch (err) {
-    console.error(err);
-    alert("Erro ao cadastrar item. Veja se os campos estão corretos e tente novamente.");
-  }
-});
+      try {
+        const fd = new FormData(e.target);
+        await API.createItem(fd);
+        e.target.reset();
+        $$('.tab[data-t="itens"]')[0].click();
+        renderItems();
+        renderSelectForReq();
+      } catch (err) {
+        console.error(err);
+        alert("Erro ao cadastrar item. Veja se os campos estão corretos e tente novamente.");
+      }
+    });
 
     // SOLICITAÇÕES
     async function renderSelectForReq() {
