@@ -1,208 +1,345 @@
-<!doctype html>
-<html lang="pt-br">
+<!DOCTYPE html>
+<html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8" />
   <title>Almoxarifado • v7.8</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- CSS do site branco -->
   <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- jsPDF para geração de PDFs -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
-<body class="bg-slate-50 text-slate-900">
-  <header class="w-full border-b bg-white/70 backdrop-blur sticky top-0 z-10">
-    <div class="max-w-7xl mx-auto flex items-center justify-between p-3">
-      <div class="text-lg font-semibold">Almoxarifado • <span id="app-ver">v7.8</span></div>
-      <div class="flex items-center gap-2">
-        <span id="badge-role" class="badge text-white bg-slate-900">ROLE</span>
-        <span id="badge-user" class="text-sm">User</span>
-        <button id="btn-logout" class="btn2" type="button">Sair</button>
-      </div>
-    </div>
-  </header>
+<body>
+  <div class="app-shell">
 
-  <main class="max-w-7xl mx-auto p-4" id="root">
-    <!-- LOGIN -->
-    <section id="view-login" class="min-h-[70vh] grid place-items-center">
-      <div class="bg-white rounded-2xl shadow w-full max-w-md p-6">
-        <h1 class="text-2xl font-semibold mb-2">Almoxarifado • Login</h1>
-        <p class="text-sm text-slate-500 mb-4">Use <b>admin/admin</b>, <b>almox/almox</b> ou <b>sol/sol</b>.</p>
-        <div class="space-y-3">
-          <div><label class="text-sm">Usuário</label><input id="login-user" class="inp" autocomplete="username"></div>
-          <div><label class="text-sm">Senha</label><input id="login-pass" type="password" class="inp" autocomplete="current-password"></div>
-          <div id="login-err" class="text-red-600 text-sm hidden">Usuário ou senha inválidos.</div>
-          <button id="btn-login" class="btn w-full" type="button">Entrar</button>
-          <button id="btn-wipe" class="btn2 w-full" type="button">Limpar dados (LocalStorage)</button>
+    <!-- ================= LOGIN ================= -->
+    <section id="view-login" class="view">
+      <div class="page-center">
+        <div class="card card-login">
+          <h1 class="title-main">Almoxarifado • v7.8</h1>
+          <p class="muted">Informe usuário e senha para entrar.</p>
+
+          <div class="form-group">
+            <label for="login-user">Usuário</label>
+            <input id="login-user" class="inp" type="text" placeholder="admin / almox / sol" />
+          </div>
+
+          <div class="form-group">
+            <label for="login-pass">Senha</label>
+            <input id="login-pass" class="inp" type="password" placeholder="senha" />
+          </div>
+
+          <div id="login-err" class="muted error hidden">
+            Usuário ou senha inválidos.
+          </div>
+
+          <div class="actions-row">
+            <button id="btn-login" class="btn">Entrar</button>
+            <button id="btn-wipe" class="btn2" type="button" title="Limpar dados locais deste navegador">
+              Limpar este navegador
+            </button>
+          </div>
+
+          <div class="muted small">
+            Logins padrão:<br />
+            <b>admin/admin</b> • <b>almox/almox</b> • <b>sol/sol</b>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- APP -->
-    <section id="view-app" class="hidden">
-      <!-- NAV -->
-      <nav class="navbar mb-4">
-        <button class="tab navbtn" data-t="tab-itens" type="button">Itens</button>
-        <button class="tab navbtn" data-t="tab-cad" type="button">Cadastrar</button>
-        <button class="tab navbtn" data-t="tab-sol" type="button">Solicitações</button>
-        <button class="tab navbtn" data-t="tab-almox" type="button">Almoxarife</button>
-        <button class="tab navbtn" data-t="tab-res" type="button">Resumo</button>
-        <button class="tab navbtn" data-t="tab-users" type="button">Usuários</button>
+    <!-- ================= APP ================= -->
+    <section id="view-app" class="view hidden">
+      <!-- Cabeçalho -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <div class="logo-circle">A</div>
+          <div>
+            <div class="title-main">Almoxarifado • <span class="pill pill-green">v7.8</span></div>
+            <div class="muted small">Controle de itens, solicitações, entregas e usuários</div>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <span id="badge-user" class="badge"></span>
+          <span id="badge-role" class="badge"></span>
+          <button id="btn-logout" class="btn2" type="button">Sair</button>
+        </div>
+      </header>
+
+      <!-- Abas -->
+      <nav class="tabs-bar">
+        <button class="tab active" data-t="tab-itens">Itens</button>
+        <button class="tab" data-t="tab-cad">Cadastro</button>
+        <button class="tab" data-t="tab-sol">Solicitações</button>
+        <button class="tab" data-t="tab-almox">Almoxarife</button>
+        <button class="tab" data-t="tab-res">Resumo</button>
+        <button class="tab" data-t="tab-users">Usuários</button>
       </nav>
 
-      <!-- ITENS -->
-      <section id="tab-itens" class="card hidden">
-        <div class="flex items-center justify-between mb-3">
-          <input id="itens-q" class="inp max-w-md" placeholder="Buscar insumo/código/unidade">
-          <div class="text-xs text-slate-500">* Caixa fica vermelha quando estoque &lt; mínimo.</div>
-        </div>
-        <div id="itens-list" class="grid md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
-        <div id="itens-empty" class="muted hidden">Nenhum item.</div>
-      </section>
+      <!-- Conteúdo das abas -->
+      <main class="main-area">
 
-      <!-- CADASTRO -->
-      <section id="tab-cad" class="card hidden">
-        <h2 class="title">Cadastrar Insumo</h2>
-        <form id="cad-form" class="grid md:grid-cols-2 gap-3">
-          <div class="md:col-span-2"><label class="text-sm">Nome Insumo</label><input name="name" class="inp" required></div>
-          <div><label class="text-sm">Cód. Material</label><input name="code" class="inp"></div>
-          <div><label class="text-sm">Unidade</label><input name="unit" class="inp" placeholder="ex: un, cx, kg, m"></div>
-          <div class="md:col-span-2"><label class="text-sm">Inserir Foto</label><input name="image" type="file" accept="image/*" class="inp"></div>
-          <div class="md:col-span-2 flex justify-end"><button class="btn" type="submit">Cadastrar</button></div>
-        </form>
-      </section>
-
-      <!-- SOLICITAÇÕES -->
-      <section id="tab-sol" class="card hidden">
-        <div class="grid lg:grid-cols-3 gap-4">
-          <div>
-            <h2 class="title">Nova Solicitação</h2>
-            <div class="space-y-3 mb-3">
-              <input id="s-pedido" class="inp" placeholder="Pedido (ex: 2025-0001)">
-              <input id="s-linha" class="inp" placeholder="Linha">
-              <input id="s-forn" class="inp" placeholder="Fornecedor">
-              <input id="s-marca" class="inp" placeholder="Marca">
+        <!-- ========== ABA ITENS ========== -->
+        <section id="tab-itens" class="tab-view">
+          <div class="section-header">
+            <h2>Itens em estoque</h2>
+            <div class="search-box">
+              <input id="itens-q" class="inp" type="text" placeholder="Buscar por nome, código ou unidade" />
             </div>
-            <div class="box">
-              <label class="text-sm">Nome Insumo</label>
-              <select id="s-item" class="inp"></select>
-              <div class="grid grid-cols-3 gap-2 text-sm mt-2">
-                <input id="s-code" class="inp" readonly>
-                <input id="s-unit" class="inp" readonly>
-                <input id="s-stock" class="inp" readonly>
+          </div>
+
+          <div id="itens-list" class="cards-grid"></div>
+          <div id="itens-empty" class="muted center">
+            Nenhum item cadastrado ainda.
+          </div>
+        </section>
+
+        <!-- ========== ABA CADASTRO ========== -->
+        <section id="tab-cad" class="tab-view hidden">
+          <h2>Cadastro de novo item</h2>
+          <p class="muted small">Somente ADMIN / ALMOX podem cadastrar itens.</p>
+
+          <form id="cad-form" class="form-grid">
+            <div class="form-group">
+              <label for="c-name">Nome do item</label>
+              <input id="c-name" name="name" class="inp" type="text" required />
+            </div>
+
+            <div class="form-group">
+              <label for="c-code">Código</label>
+              <input id="c-code" name="code" class="inp" type="text" />
+            </div>
+
+            <div class="form-group">
+              <label for="c-unit">Unidade</label>
+              <input id="c-unit" name="unit" class="inp" type="text" placeholder="ex: CX, UN, PCT..." />
+            </div>
+
+            <div class="form-group full">
+              <label for="c-img">Imagem do item (opcional)</label>
+              <input id="c-img" name="image" class="inp" type="file" accept="image/*" />
+            </div>
+
+            <div class="form-actions">
+              <button class="btn" type="submit">Salvar item</button>
+            </div>
+          </form>
+        </section>
+
+        <!-- ========== ABA SOLICITAÇÕES ========== -->
+        <section id="tab-sol" class="tab-view hidden">
+          <div class="section-grid-2">
+            <!-- Coluna esquerda: nova solicitação -->
+            <div>
+              <h2>Nova solicitação</h2>
+              <div class="form-group">
+                <label for="s-item">Item</label>
+                <select id="s-item" class="inp"></select>
               </div>
-              <div id="s-photo" class="text-xs text-slate-500 mt-2">Sem foto</div>
-              <div class="grid grid-cols-3 gap-2 mt-2">
-                <input id="s-qt" type="number" min="1" value="1" class="inp">
-                <input id="s-vu" type="number" min="0" step="0.01" value="0" class="inp">
-                <input id="s-total" class="inp" readonly>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="s-code">Código</label>
+                  <input id="s-code" class="inp" type="text" readonly />
+                </div>
+                <div class="form-group">
+                  <label for="s-unit">Unidade</label>
+                  <input id="s-unit" class="inp" type="text" readonly />
+                </div>
+                <div class="form-group">
+                  <label for="s-stock">Estoque</label>
+                  <input id="s-stock" class="inp" type="number" readonly />
+                </div>
               </div>
-              <button id="s-add" class="btn w-full mt-2" type="button">Adicionar material</button>
-            </div>
-          </div>
-          <div class="lg:col-span-2">
-            <div class="flex items-center justify-between">
-              <h3 class="font-semibold mb-2">Materiais adicionados</h3>
-              <button id="s-pdf" class="btn2" type="button">Baixar PDF (rascunho)</button>
-            </div>
-            <div id="s-list" class="space-y-3"></div>
-            <div id="s-empty" class="muted">Nenhum material.</div>
-            <div class="flex justify-end mt-3"><button id="s-save" class="btn" type="button">Salvar solicitação</button></div>
-            <hr class="my-6">
-            <div class="flex items-center justify-between">
-              <h3 class="font-semibold">Minhas solicitações</h3>
-              <input id="s-q" class="inp text-sm" placeholder="Buscar por pedido/fornecedor/marca">
-            </div>
-            <div id="s-me" class="space-y-3"></div>
-            <div id="s-me-empty" class="muted hidden">Nenhuma solicitação.</div>
-            <div class="flex justify-end mt-3"><button id="s-pdf-all" class="btn2" type="button">Baixar PDF (todas)</button></div>
-          </div>
-        </div>
-      </section>
 
-      <!-- ALMOX -->
-      <section id="tab-almox" class="card hidden">
-        <div class="grid lg:grid-cols-3 gap-4">
-          <div>
-            <h2 class="title">Calendário</h2>
-            <div class="flex items-center gap-2 mb-2">
-              <button id="c-prev" class="btn2" type="button">&larr;</button>
-              <div id="c-title" class="font-semibold"></div>
-              <button id="c-next" class="btn2" type="button">&rarr;</button>
-            </div>
-            <table class="calendar w-full border text-sm">
-              <thead><tr class="text-slate-500"><th>Dom</th><th>Seg</th><th>Ter</th><th>Qua</th><th>Qui</th><th>Sex</th><th>Sáb</th></tr></thead>
-              <tbody id="c-body"></tbody>
-            </table>
-            <div class="text-xs mt-2 flex items-center gap-4">
-              <span><span class="dot bg-red-600"></span> Pendente</span>
-              <span><span class="dot bg-amber-600"></span> Parcial</span>
-              <span><span class="dot bg-green-600"></span> Concluído</span>
-            </div>
-            <div id="c-day" class="mt-3 text-sm"></div>
-          </div>
-          <div class="lg:col-span-2">
-            <h2 class="title">Acompanhar Solicitações</h2>
-            <div id="a-list" class="space-y-3"></div>
-            <div id="a-empty" class="muted">Nenhuma solicitação pendente.</div>
-          </div>
-        </div>
-      </section>
+              <div class="form-group">
+                <label>Foto do item</label>
+                <div id="s-photo" class="muted">Sem foto</div>
+              </div>
 
-      <!-- RESUMO -->
-      <section id="tab-res" class="card hidden">
-        <div class="flex items-center justify-between mb-2">
-          <h2 class="title">Resumo</h2>
-          <div class="flex items-center gap-2">
-            <input id="r-q" class="inp text-sm w-64" placeholder="Buscar (pedido/fornecedor/marca)">
-            <button id="r-pdf" class="btn2" type="button">Baixar PDF Geral</button>
-          </div>
-        </div>
-        <div class="text-xs mb-3 flex items-center gap-4">
-          <span><span class="pill pill-red">PENDENTE</span></span>
-          <span><span class="pill pill-amber">PARCIAL</span></span>
-          <span><span class="pill pill-green">CONCLUÍDO</span></span>
-        </div>
-        <div class="grid lg:grid-cols-2 gap-4">
-          <div>
-            <h3 class="font-semibold mb-2">Pendentes / Parciais</h3>
-            <div id="r-pend" class="space-y-2"></div>
-            <div id="r-pend-empty" class="muted">Nenhuma pendência.</div>
-          </div>
-          <div>
-            <h3 class="font-semibold mb-2">Concluídas</h3>
-            <div id="r-done" class="space-y-2"></div>
-            <div id="r-done-empty" class="muted">Nada concluído ainda.</div>
-          </div>
-        </div>
-        <hr class="my-6">
-        <h3 class="font-semibold mb-2">Totais por Item</h3>
-        <div id="r-tot" class="space-y-1 text-sm"></div>
-      </section>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="s-qt">Quantidade</label>
+                  <input id="s-qt" class="inp" type="number" min="0" value="0" />
+                </div>
+                <div class="form-group">
+                  <label for="s-vu">Valor unitário</label>
+                  <input id="s-vu" class="inp" type="number" step="0.01" min="0" value="0" />
+                </div>
+                <div class="form-group">
+                  <label for="s-total">Total</label>
+                  <input id="s-total" class="inp" type="text" readonly />
+                </div>
+              </div>
 
-      <!-- USERS -->
-      <section id="tab-users" class="card hidden">
-        <div class="grid lg:grid-cols-3 gap-4">
-          <div>
-            <h2 class="title">Novo Usuário</h2>
-            <input id="u-name" class="inp" placeholder="Nome">
-            <input id="u-username" class="inp" placeholder="Usuário">
-            <input id="u-password" type="password" class="inp" placeholder="Senha">
-            <select id="u-role" class="inp">
-              <option value="ADMIN">ADMIN</option>
-              <option value="ALMOX">ALMOX</option>
-              <option value="SOLICITANTE" selected>SOLICITANTE</option>
-            </select>
-            <button id="u-create" class="btn mt-2" type="button">Cadastrar</button>
-            <div class="text-xs text-slate-500 mt-3">Logins padrão: <b>admin/admin</b>, <b>almox/almox</b>, <b>sol/sol</b>.</div>
+              <div class="actions-row">
+                <button id="s-add" class="btn2" type="button">Adicionar ao pedido</button>
+              </div>
+
+              <hr />
+
+              <div class="form-group">
+                <label for="s-pedido">Nº do pedido</label>
+                <input id="s-pedido" class="inp" type="text" />
+              </div>
+              <div class="form-group">
+                <label for="s-linha">Linha / Obra / Setor</label>
+                <input id="s-linha" class="inp" type="text" />
+              </div>
+              <div class="form-group">
+                <label for="s-forn">Fornecedor</label>
+                <input id="s-forn" class="inp" type="text" />
+              </div>
+              <div class="form-group">
+                <label for="s-marca">Marca</label>
+                <input id="s-marca" class="inp" type="text" />
+              </div>
+
+              <div class="actions-row">
+                <button id="s-save" class="btn" type="button">Salvar solicitação</button>
+                <button id="s-pdf" class="btn2" type="button">PDF do rascunho</button>
+              </div>
+            </div>
+
+            <!-- Coluna direita: rascunho e minhas solicitações -->
+            <div>
+              <h2>Materiais do pedido (rascunho)</h2>
+              <div id="s-empty" class="muted">Nenhum material adicionado.</div>
+              <div id="s-list" class="cards-column"></div>
+
+              <div class="actions-row top-space">
+                <button id="s-pdf-all" class="btn2" type="button">
+                  PDF - Minhas solicitações
+                </button>
+              </div>
+
+              <hr />
+
+              <div class="section-header">
+                <h3>Minhas solicitações</h3>
+                <input id="s-q" class="inp small" type="text" placeholder="Filtrar por pedido, fornecedor, marca..." />
+              </div>
+              <div id="s-me-empty" class="muted">Você ainda não fez nenhuma solicitação.</div>
+              <div id="s-me" class="cards-column"></div>
+            </div>
           </div>
-          <div class="lg:col-span-2">
-            <div id="u-list" class="space-y-2"></div>
-            <div id="u-empty" class="muted hidden">Nenhum usuário.</div>
+        </section>
+
+        <!-- ========== ABA ALMOXARIFE ========== -->
+        <section id="tab-almox" class="tab-view hidden">
+          <div class="section-grid-2">
+            <!-- Coluna esquerda: painéis de recebimento -->
+            <div>
+              <h2>Recebimento / Almoxarife</h2>
+              <p class="muted small">
+                Atualize quantidades recebidas, datas de entrega e observações.
+              </p>
+              <div id="a-empty" class="muted">Nenhuma solicitação pendente.</div>
+              <div id="a-list" class="cards-column"></div>
+            </div>
+
+            <!-- Coluna direita: calendário -->
+            <div>
+              <h2>Calendário de entregas</h2>
+              <div class="calendar">
+                <div class="calendar-header">
+                  <button id="c-prev" class="btn2" type="button">&lt;</button>
+                  <span id="c-title" class="calendar-title"></span>
+                  <button id="c-next" class="btn2" type="button">&gt;</button>
+                </div>
+                <table class="calendar-table">
+                  <thead>
+                    <tr>
+                      <th>Dom</th><th>Seg</th><th>Ter</th><th>Qua</th><th>Qui</th><th>Sex</th><th>Sáb</th>
+                    </tr>
+                  </thead>
+                  <tbody id="c-body"></tbody>
+                </table>
+              </div>
+              <div id="c-day" class="card top-space">
+                <span class="muted">Clique em uma data no calendário para ver os pedidos programados.</span>
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+
+        <!-- ========== ABA RESUMO ========== -->
+        <section id="tab-res" class="tab-view hidden">
+          <div class="section-header">
+            <h2>Resumo de solicitações</h2>
+            <input id="r-q" class="inp small" type="text" placeholder="Filtrar por pedido, fornecedor, marca..." />
+          </div>
+
+          <div class="summary-grid">
+            <div>
+              <h3>Pendentes / Parciais</h3>
+              <div id="r-pend-empty" class="muted">Nenhuma pendência encontrada.</div>
+              <div id="r-pend" class="cards-column"></div>
+            </div>
+            <div>
+              <h3>Concluídas</h3>
+              <div id="r-done-empty" class="muted">Nenhuma solicitação concluída ainda.</div>
+              <div id="r-done" class="cards-column"></div>
+            </div>
+          </div>
+
+          <div class="top-space">
+            <h3>Totais por item</h3>
+            <div id="r-tot" class="totals-box"></div>
+          </div>
+
+          <div class="actions-row top-space">
+            <button id="r-pdf" class="btn2" type="button">PDF - Resumo geral</button>
+          </div>
+        </section>
+
+        <!-- ========== ABA USUÁRIOS ========== -->
+        <section id="tab-users" class="tab-view hidden">
+          <div class="section-grid-2">
+            <div>
+              <h2>Cadastro de usuários</h2>
+              <p class="muted small">Somente ADMIN pode criar, editar e excluir usuários.</p>
+
+              <div class="form-group">
+                <label for="u-name">Nome</label>
+                <input id="u-name" class="inp" type="text" />
+              </div>
+              <div class="form-group">
+                <label for="u-username">Login</label>
+                <input id="u-username" class="inp" type="text" />
+              </div>
+              <div class="form-group">
+                <label for="u-password">Senha</label>
+                <input id="u-password" class="inp" type="password" />
+              </div>
+              <div class="form-group">
+                <label for="u-role">Função</label>
+                <select id="u-role" class="inp">
+                  <option value="ADMIN">ADMIN</option>
+                  <option value="ALMOX">ALMOX</option>
+                  <option value="SOLICITANTE" selected>SOLICITANTE</option>
+                </select>
+              </div>
+
+              <div class="actions-row">
+                <button id="u-create" class="btn" type="button">Criar usuário</button>
+              </div>
+            </div>
+
+            <div>
+              <h2>Usuários cadastrados</h2>
+              <div id="u-empty" class="muted">Nenhum usuário além do administrador padrão.</div>
+              <div id="u-list" class="cards-column"></div>
+            </div>
+          </div>
+        </section>
+
+      </main>
     </section>
-  </main>
+  </div>
 
-  <script defer src="app.js"></script>
+  <!-- JS principal -->
+  <script src="app.js"></script>
 </body>
 </html>
