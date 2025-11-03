@@ -1,17 +1,453 @@
+/* ========= RESET / BASE ========= */
 
-.hidden{display:none}
-.card{background:#fff;border-radius:1rem;box-shadow:0 0 0 1px #e5e7eb,0 1px 2px rgba(0,0,0,.04);padding:1rem}
-.title{font-size:1.125rem;font-weight:600;margin-bottom:.5rem}
-.inp{border:1px solid #e5e7eb;border-radius:.5rem;padding:.5rem;width:100%}
-.btn{background:#111827;color:#fff;border-radius:.5rem;padding:.5rem 1rem}
-.btn2{border:1px solid #e5e7eb;border-radius:.5rem;padding:.3rem .6rem}
-.badge{display:inline-block;padding:2px 8px;border-radius:9999px;font-size:12px}
-.navbar{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:.75rem}
-.navbtn{border:1px solid #e5e7eb;border-radius:9999px;padding:.6rem 1rem;background:#fff}
-.navbtn.active{background:#0f172a;color:#fff}
-.calendar td{width:38px;height:38px;text-align:center;vertical-align:middle}
-.pill{display:inline-block;padding:2px 8px;border-radius:9999px;font-size:12px}
-.pill-red{background:#dc2626;color:#fff}.pill-amber{background:#d97706;color:#fff}.pill-green{background:#16a34a;color:#fff}
-.low{border:2px solid #dc2626;background:#fee2e2}
-.muted{color:#64748b;text-align:center;padding:1rem}
-.dot{display:inline-block;width:.75rem;height:.75rem;border-radius:9999px;margin-right:.25rem}
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  background: #f3f4f6;
+  color: #0f172a;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+/* ========= LAYOUT GERAL ========= */
+
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.view {
+  flex: 1;
+}
+
+.page-center {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+/* ========= TIPOGRAFIA / TEXTOS ========= */
+
+.title-main {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.muted {
+  color: #6b7280;
+}
+
+.small {
+  font-size: 0.875rem;
+}
+
+.error {
+  color: #b91c1c;
+  margin-top: 0.25rem;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ========= CARDS ========= */
+
+.card {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e5e7eb;
+}
+
+.card-login {
+  width: 100%;
+  max-width: 420px;
+}
+
+/* ========= INPUTS / FORM ========= */
+
+.form-group {
+  margin-bottom: 0.9rem;
+}
+
+.form-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.form-row .form-group {
+  flex: 1;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.form-group.full {
+  grid-column: 1 / -1;
+}
+
+.inp {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.95rem;
+  outline: none;
+  background: #ffffff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.inp:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 1px #6366f1;
+}
+
+label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #4b5563;
+  display: block;
+  margin-bottom: 0.15rem;
+}
+
+/* ========= BOTÕES ========= */
+
+.btn,
+.btn2 {
+  border-radius: 999px;
+  padding: 0.45rem 1.3rem;
+  font-size: 0.9rem;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease,
+    box-shadow 0.15s ease, border-color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+.btn {
+  background: #111827;
+  color: #ffffff;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.25);
+}
+
+.btn:hover {
+  background: #020617;
+}
+
+.btn2 {
+  background: #ffffff;
+  color: #111827;
+  border: 1px solid #d1d5db;
+}
+
+.btn2:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.actions-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+.form-actions {
+  margin-top: 0.5rem;
+}
+
+/* ========= BADGES / PILLS ========= */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.2rem 0.8rem;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.pill {
+  border-radius: 999px;
+  padding: 0.15rem 0.7rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.pill-green {
+  background: #22c55e;
+  color: #ecfdf3;
+}
+
+.pill-red {
+  background: #ef4444;
+  color: #fee2e2;
+}
+
+.pill-amber {
+  background: #f59e0b;
+  color: #fffbeb;
+}
+
+/* ========= TOPBAR ========= */
+
+.topbar {
+  background: #0f172a;
+  color: #e5e7eb;
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.logo-circle {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: #111827;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: #e5e7eb;
+  font-size: 0.8rem;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ========= TABS ========= */
+
+.tabs-bar {
+  background: #f9fafb;
+  padding: 0.9rem 1.5rem 0.25rem;
+  display: flex;
+  gap: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.tab {
+  border-radius: 999px;
+  padding: 0.6rem 1.8rem;
+  border: none;
+  background: #e5e7eb;
+  color: #111827;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+  transition: background 0.15s ease, color 0.15s ease,
+    transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+.tab:hover {
+  background: #d1d5db;
+}
+
+.tab.active {
+  background: #020617;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.25);
+}
+
+/* ========= CONTEÚDO PRINCIPAL ========= */
+
+.main-area {
+  padding: 1.5rem 1.5rem 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.section-header h2,
+.section-header h3 {
+  margin: 0;
+}
+
+.search-box {
+  max-width: 320px;
+  width: 100%;
+}
+
+/* ========= GRIDS / LAYOUTS ========= */
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.cards-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.card.low {
+  border-color: #fecaca;
+  box-shadow: 0 10px 25px rgba(248, 113, 113, 0.25);
+}
+
+.center {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+/* colunas lado a lado */
+.section-grid-2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.95fr);
+  gap: 1.5rem;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.5rem;
+}
+
+.top-space {
+  margin-top: 1rem;
+}
+
+/* Totais */
+.totals-box {
+  background: #f9fafb;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  padding: 0.9rem 1.1rem;
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+.totals-box > div + div {
+  margin-top: 0.25rem;
+}
+
+/* ========= CALENDÁRIO ========= */
+
+.calendar {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 1rem 1.1rem;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+}
+
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+}
+
+.calendar-title {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.calendar-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.calendar-table th {
+  font-weight: 500;
+  color: #6b7280;
+  padding-bottom: 0.3rem;
+}
+
+.calendar-table td {
+  padding: 0.3rem 0.1rem;
+  height: 30px;
+  border: 1px solid #e5e7eb;
+  font-size: 0.75rem;
+}
+
+/* ========= RESPONSIVO ========= */
+
+@media (max-width: 900px) {
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .tabs-bar {
+    padding-inline: 1rem;
+    overflow-x: auto;
+  }
+
+  .main-area {
+    padding-inline: 1rem;
+  }
+
+  .section-grid-2,
+  .summary-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .form-row {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 600px) {
+  .card-login {
+    max-width: 100%;
+  }
+
+  .tab {
+    padding-inline: 1.2rem;
+  }
+}
