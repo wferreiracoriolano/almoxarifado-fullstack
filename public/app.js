@@ -27,7 +27,10 @@ let state = {
 
 let stateLoaded = false;
 
-// Carrega tudo do servidor ao iniciar
+// =========================
+// Carrega / salva estado no servidor
+// =========================
+
 async function loadStateFromServer() {
   try {
     const res = await fetch("/api/state");
@@ -46,14 +49,12 @@ async function loadStateFromServer() {
   render(); // atualiza a tela com o que veio do servidor
 }
 
-// Garante que o estado foi carregado (ex.: antes do login)
 async function ensureStateLoaded() {
   if (!stateLoaded) {
     await loadStateFromServer();
   }
 }
 
-// Envia o estado atual (users/items/reqs) para o servidor
 async function syncStateToServer() {
   try {
     await fetch("/api/state", {
@@ -88,7 +89,10 @@ function setState(p) {
   }
 }
 
+// =========================
 // Helpers gerais
+// =========================
+
 function roleClass(r) {
   return {
     ADMIN: "bg-purple-600",
@@ -164,16 +168,21 @@ function showTab(id) {
   ].forEach((t) => $("#" + t).classList.add("hidden"));
   $("#" + id).classList.remove("hidden");
 }
+
 $$(".tab").forEach((b) =>
   b.addEventListener("click", () => showTab(b.dataset.t))
 );
 
 function setRoleVisibility() {
+  if (!state.session) return;
   const isAdmin = state.session.role === "ADMIN";
   const isAlmox = isAdmin || state.session.role === "ALMOX";
   // Mostra/esconde apenas botões, não o conteúdo
-  $$('[data-t="tab-cad"]')[0].classList.toggle("hidden", !isAlmox);
-  $$('[data-t="tab-users"]')[0].classList.toggle("hidden", !isAdmin);
+  const cadTab = $$('[data-t="tab-cad"]')[0];
+  const usersTab = $$('[data-t="tab-users"]')[0];
+  if (cadTab) cadTab.classList.toggle("hidden", !isAlmox);
+  if (usersTab) usersTab.classList.toggle("hidden", !isAdmin);
+
   // Garante que sempre existe uma aba ativa visível
   if (
     !$$(".tab.active").length ||
@@ -333,9 +342,19 @@ $("#cad-form").addEventListener("submit", async (e) => {
     imageData: img,
   };
   setState({ items: [it, ...state.items] });
+
+  // limpa formulário + preview de imagem
   e.target.reset();
+  if (cadImgPreview) {
+    cadImgPreview.textContent = "Nenhuma imagem selecionada.";
+  }
+  if (cadImgClear) {
+    cadImgClear.classList.add("hidden");
+  }
+
   showTab("tab-itens");
 });
+
 // Preview e remoção da imagem no cadastro
 const cadImgInput = $("#c-img");
 const cadImgClear = $("#c-img-clear");
@@ -352,8 +371,7 @@ if (cadImgInput && cadImgPreview && cadImgClear) {
 
     const r = new FileReader();
     r.onload = () => {
-      cadImgPreview.innerHTML =
-        `<img src="${r.result}" class="preview-img">`;
+      cadImgPreview.innerHTML = `<img src="${r.result}" class="preview-img">`;
       cadImgClear.classList.remove("hidden");
     };
     r.readAsDataURL(file);
@@ -527,6 +545,7 @@ function pdfHeader(doc, title) {
   doc.text(right, w - 40 - doc.getTextWidth(right), y);
   return y + 16;
 }
+
 function pdfFooter(doc) {
   const w = doc.internal.pageSize.getWidth();
   const h = doc.internal.pageSize.getHeight();
@@ -537,8 +556,9 @@ function pdfFooter(doc) {
     doc.text(`Página ${i} de ${pc}`, w - 80, h - 20);
   }
 }
-ffunction pdfTable(doc, y, rows, cols) {
-  // Larguras ajustadas para caber na página A4 (margem 40 pt de cada lado)
+
+function pdfTable(doc, y, rows, cols) {
+  // Larguras ajustadas para caber na página A4 (margem 40 pt)
   cols =
     cols ||
     [
@@ -552,14 +572,14 @@ ffunction pdfTable(doc, y, rows, cols) {
         t: "V.U.",
         w: 50,
         r: true,
-        fmt: (v) => `R$ ${Number(v || 0).toFixed(2)}`
+        fmt: (v) => `R$ ${Number(v || 0).toFixed(2)`,
       },
       {
         k: "total",
         t: "Total",
         w: 55,
         r: true,
-        fmt: (v) => `R$ ${Number(v || 0).toFixed(2)}`
+        fmt: (v) => `R$ ${Number(v || 0).toFixed(2)}`,
       },
       { k: "received", t: "Receb", w: 34, r: true },
       { k: "left", t: "Falta", w: 34, r: true },
@@ -604,50 +624,13 @@ ffunction pdfTable(doc, y, rows, cols) {
     });
 
     y += 14;
+    // quebra de página
     if (y > doc.internal.pageSize.getHeight() - 40) {
       doc.addPage();
       y = 40;
     }
   });
 
-  return y;
-}
-
-  const x0 = 40;
-  let x = x0;
-  doc.setFontSize(9);
-  cols.forEach((c) => {
-    doc.text(c.t, x + 2, y);
-    x += c.w;
-  });
-  y += 6;
-  doc.setDrawColor(200);
-  doc.line(
-    x0,
-    y,
-    x0 + cols.reduce((a, c) => a + c.w, 0),
-    y
-  );
-  y += 8;
-  rows.forEach((r) => {
-    x = x0;
-    cols.forEach((c) => {
-      const raw = r[c.k];
-      const val = c.fmt ? c.fmt(raw) : raw == null ? "" : String(raw);
-      if (c.r) {
-        const tw = doc.getTextWidth(val);
-        doc.text(val, x + c.w - 2 - tw, y);
-      } else {
-        doc.text(val, x + 2, y);
-      }
-      x += c.w;
-    });
-    y += 14;
-    if (y > doc.internal.pageSize.getHeight() - 40) {
-      doc.addPage();
-      y = 40;
-    }
-  });
   return y;
 }
 
@@ -765,7 +748,12 @@ $("#s-pdf-all").onclick = () => {
   doc.save("minhas-solicitacoes.pdf");
 };
 
+// =========================
+// Minhas solicitações (lista)
+// =========================
+
 $("#s-q").oninput = renderMine;
+
 function renderMine() {
   const list = $("#s-me");
   list.innerHTML = "";
@@ -890,12 +878,11 @@ function buildCal() {
       const key = `${y}-${String(m + 1).padStart(2, "0")}-${String(
         d
       ).padStart(2, "0")}`;
-    const st = map[key];
+      const st = map[key];
       if (st) {
         const dot = document.createElement("span");
         dot.className = "cal-dot";
 
-        // cor da bolinha
         if (st === "PENDENTE") dot.classList.add("dot-red");
         else if (st === "PARCIAL") dot.classList.add("dot-amber");
         else dot.classList.add("dot-green");
@@ -905,13 +892,23 @@ function buildCal() {
         td.onclick = () => showDay(key);
       }
 
-
       tr.appendChild(td);
       d++;
     }
     body.appendChild(tr);
   }
 }
+
+// Navegação do calendário (mês anterior / próximo)
+$("#c-prev").onclick = () => {
+  calRef.setMonth(calRef.getMonth() - 1);
+  buildCal();
+};
+
+$("#c-next").onclick = () => {
+  calRef.setMonth(calRef.getMonth() + 1);
+  buildCal();
+};
 
 function showDay(key) {
   const box = $("#c-day");
