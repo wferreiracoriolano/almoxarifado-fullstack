@@ -451,3 +451,18 @@ label {
     padding-inline: 1.2rem;
   }
 }
+
+/* ========= UTILITÁRIOS DE IMAGEM (corrigem fotos gigantes) ========= */
+
+.w-full { width: 100%; }
+.w-10 { width: 40px; }
+.h-40 { height: 160px; }   /* ajuste aqui se quiser as fotos maiores/menores */
+.h-10 { height: 40px; }
+.h-20 { height: 80px; }
+
+.object-cover { object-fit: cover; }
+
+.rounded-lg { border-radius: 12px; }
+.rounded { border-radius: 999px; }
+
+.mb-2 { margin-bottom: 0.5rem; }
