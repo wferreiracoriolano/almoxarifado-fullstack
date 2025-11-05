@@ -537,33 +537,82 @@ function pdfFooter(doc) {
     doc.text(`Página ${i} de ${pc}`, w - 80, h - 20);
   }
 }
-function pdfTable(doc, y, rows, cols) {
+ffunction pdfTable(doc, y, rows, cols) {
+  // Larguras ajustadas para caber na página A4 (margem 40 pt de cada lado)
   cols =
     cols ||
     [
-      { k: "idx", t: "#", w: 24 },
-      { k: "name", t: "Item", w: 210 },
-      { k: "code", t: "Cód", w: 70 },
-      { k: "unit", t: "Un", w: 26 },
-      { k: "qty", t: "Qtde", w: 40, r: true },
+      { k: "idx", t: "#", w: 14 },
+      { k: "name", t: "Item", w: 140 },
+      { k: "code", t: "Cód", w: 50 },
+      { k: "unit", t: "Un", w: 22 },
+      { k: "qty", t: "Qtde", w: 30, r: true },
       {
         k: "unitPrice",
         t: "V.U.",
-        w: 60,
+        w: 50,
         r: true,
-        fmt: (v) => `R$ ${Number(v || 0).toFixed(2)}`,
+        fmt: (v) => `R$ ${Number(v || 0).toFixed(2)}`
       },
       {
         k: "total",
         t: "Total",
-        w: 70,
+        w: 55,
         r: true,
-        fmt: (v) => `R$ ${Number(v || 0).toFixed(2)}`,
+        fmt: (v) => `R$ ${Number(v || 0).toFixed(2)}`
       },
-      { k: "received", t: "Receb", w: 42, r: true },
-      { k: "left", t: "Falta", w: 42, r: true },
-      { k: "notes", t: "Obs", w: 120 },
+      { k: "received", t: "Receb", w: 34, r: true },
+      { k: "left", t: "Falta", w: 34, r: true },
+      { k: "notes", t: "Obs", w: 60 },
     ];
+
+  const x0 = 40; // margem esquerda
+  let x = x0;
+
+  doc.setFontSize(9);
+
+  // Cabeçalho
+  cols.forEach((c) => {
+    doc.text(c.t, x + 2, y);
+    x += c.w;
+  });
+
+  y += 6;
+  doc.setDrawColor(200);
+  doc.line(
+    x0,
+    y,
+    x0 + cols.reduce((a, c) => a + c.w, 0),
+    y
+  );
+  y += 8;
+
+  // Linhas
+  rows.forEach((r) => {
+    x = x0;
+    cols.forEach((c) => {
+      const raw = r[c.k];
+      const val = c.fmt ? c.fmt(raw) : raw == null ? "" : String(raw);
+
+      if (c.r) {
+        const tw = doc.getTextWidth(val);
+        doc.text(val, x + c.w - 2 - tw, y);
+      } else {
+        doc.text(val, x + 2, y);
+      }
+      x += c.w;
+    });
+
+    y += 14;
+    if (y > doc.internal.pageSize.getHeight() - 40) {
+      doc.addPage();
+      y = 40;
+    }
+  });
+
+  return y;
+}
+
   const x0 = 40;
   let x = x0;
   doc.setFontSize(9);
