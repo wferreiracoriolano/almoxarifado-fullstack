@@ -466,3 +466,25 @@ label {
 .rounded { border-radius: 999px; }
 
 .mb-2 { margin-bottom: 0.5rem; }
+/* ========= BOLINHA DO CALENDÁRIO ========= */
+
+.cal-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  margin-left: 4px;
+}
+
+.dot-red {
+  background: #ef4444;
+}
+
+.dot-amber {
+  background: #f59e0b;
+}
+
+.dot-green {
+  background: #22c55e;
+}
+e
