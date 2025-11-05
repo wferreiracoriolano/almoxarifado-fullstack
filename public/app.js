@@ -109,6 +109,18 @@ function reqSummary(r) {
     p === 0 ? "CONCLUÍDO" : d > 0 ? "PARCIAL" : "PENDENTE";
   return { status, delivered: d, pending: p, total: r.lines.length };
 }
+function reqSummary(r){ ... }
+
+function fmtDate(dStr) {
+  if (!dStr) return "—";
+  const [y, m, d] = dStr.substring(0, 10).split("-");
+  return `${d}/${m}/${y}`;
+}
+
+// =========================
+// Login
+// =========================
+
 
 // =========================
 // Login
@@ -595,17 +607,15 @@ function downloadReqPDF(r) {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   let y = pdfHeader(doc, "Pedido de Material");
   doc.setFontSize(10);
-  const meta = `Pedido: ${
-    r.header.pedido || "-"
-  }    Fornecedor: ${r.header.fornecedor || "-"}    Marca: ${
-    r.header.marca || "-"
-  }    Entrega: ${
-    r.deliveryDate
-      ? new Date(r.deliveryDate).toLocaleDateString()
-      : "(definir)"
-  }`;
+
+  const entregaTxt = r.deliveryDate ? fmtDate(r.deliveryDate) : "(definir)";
+  const meta = `Pedido: ${r.header.pedido || "-"}    Fornecedor: ${
+    r.header.fornecedor || "-"
+  }    Marca: ${r.header.marca || "-"}    Entrega: ${entregaTxt}`;
+
   doc.text(meta, 40, y);
   y += 14;
+
   const rows = r.lines.map((l, i) => {
     const rec =
       (r.received && r.received[i]
@@ -626,6 +636,16 @@ function downloadReqPDF(r) {
           ? r.received[i].notes || ""
           : ""),
     };
+  });
+
+  y = pdfTable(doc, y, rows);
+  const tot = rows.reduce((a, b) => a + Number(b.total || 0), 0);
+  doc.setFontSize(11);
+  doc.text(`Total geral: R$ ${tot.toFixed(2)}`, 40, y + 10);
+  pdfFooter(doc);
+  doc.save(`solicitacao-${r.header.pedido || r.id}.pdf`);
+}
+
   });
   y = pdfTable(doc, y, rows);
   const tot = rows.reduce((a, b) => a + Number(b.total || 0), 0);
@@ -683,11 +703,11 @@ $("#s-pdf-all").onclick = () => {
 };
 
 $("#s-q").oninput = renderMine;
-
 function renderMine() {
   const list = $("#s-me");
   list.innerHTML = "";
   const q = ($("#s-q").value || "").toLowerCase();
+
   const mine = state.reqs
     .filter((r) => r.header.createdBy === state.session.name)
     .filter((r) =>
@@ -701,7 +721,9 @@ function renderMine() {
         .toLowerCase()
         .includes(q)
     );
+
   $("#s-me-empty").classList.toggle("hidden", mine.length > 0);
+
   mine.forEach((r) => {
     const sum = reqSummary(r);
     const tot = r.lines.reduce(
@@ -714,6 +736,9 @@ function renderMine() {
         : sum.status === "PARCIAL"
         ? "pill-amber"
         : "pill-green";
+
+    const entregaTxt = r.deliveryDate ? fmtDate(r.deliveryDate) : "(definir)";
+
     const el = document.createElement("div");
     el.className = "card";
     el.innerHTML = `
@@ -735,18 +760,16 @@ function renderMine() {
         </div>
         <div class="text-right text-sm">
           Total: <b>R$ ${tot.toFixed(2)}</b><br>
-          Entrega: ${
-            r.deliveryDate
-              ? new Date(r.deliveryDate).toLocaleDateString()
-              : "(definir)"
-          }<br>
+          Entrega: ${entregaTxt}<br>
           <button class="btn2 pdf mt-2" type="button">Baixar PDF</button>
         </div>
       </div>`;
+
     el.querySelector(".pdf").onclick = () => downloadReqPDF(r);
     list.appendChild(el);
   });
 }
+
 
 // =========================
 // ALMOX + calendário
@@ -759,31 +782,38 @@ function buildCal() {
     m = calRef.getMonth();
   const first = new Date(y, m, 1).getDay();
   const total = new Date(y, m + 1, 0).getDate();
+
   $("#c-title").textContent = calRef.toLocaleString("pt-BR", {
     month: "long",
     year: "numeric",
   });
+
   const body = $("#c-body");
   body.innerHTML = "";
   let d = 1;
+
   const map = {};
   state.reqs.forEach((r) => {
     if (!r.deliveryDate) return;
-    const st = reqSummary(r).status;
+    const sumStatus = reqSummary(r).status;
     const key = r.deliveryDate.substring(0, 10);
     const val =
-      st === "PENDENTE"
+      sumStatus === "PENDENTE"
         ? "PENDENTE"
-        : st === "PARCIAL"
+        : sumStatus === "PARCIAL"
         ? "PARCIAL"
         : "CONCLUÍDO";
+
+    // Mantém a mais "grave": PENDENTE > PARCIAL > CONCLUÍDO
     if (
       !map[key] ||
       map[key] === "CONCLUÍDO" ||
       (map[key] === "PARCIAL" && val === "PENDENTE")
-    )
+    ) {
       map[key] = val;
+    }
   });
+
   for (let r = 0; r < 6; r++) {
     const tr = document.createElement("tr");
     for (let c = 0; c < 7; c++) {
@@ -793,8 +823,11 @@ function buildCal() {
         tr.appendChild(td);
         continue;
       }
+
       td.textContent = d;
-      const key = new Date(y, m, d).toISOString().substring(0, 10);
+      const key = `${y}-${String(m + 1).padStart(2, "0")}-${String(
+        d
+      ).padStart(2, "0")}`;
       const st = map[key];
       if (st) {
         const color =
@@ -810,6 +843,7 @@ function buildCal() {
         td.style.cursor = "pointer";
         td.onclick = () => showDay(key);
       }
+
       tr.appendChild(td);
       d++;
     }
@@ -819,11 +853,13 @@ function buildCal() {
 
 function showDay(key) {
   const box = $("#c-day");
-  box.innerHTML = `<div class="font-semibold mb-1">Programação em ${new Date(
+  box.innerHTML = `<div class="font-semibold mb-1">Programação em ${fmtDate(
     key
-  ).toLocaleDateString()}</div>`;
+  )}</div>`;
   const rows = state.reqs.filter(
-    (r) => r.deliveryDate && r.deliveryDate.substring(0, 10) === key
+    (r) =>
+      r.deliveryDate &&
+      r.deliveryDate.substring(0, 10) === key
   );
   if (!rows.length) {
     box.innerHTML += '<div class="muted">Nada programado.</div>';
@@ -849,14 +885,7 @@ function showDay(key) {
   });
 }
 
-$("#c-prev").onclick = () => {
-  calRef.setMonth(calRef.getMonth() - 1);
-  buildCal();
-};
-$("#c-next").onclick = () => {
-  calRef.setMonth(calRef.getMonth() + 1);
-  buildCal();
-};
+
 
 function renderAlmox() {
   const list = $("#a-list");
@@ -865,10 +894,14 @@ function renderAlmox() {
     (r) => reqSummary(r).status !== "CONCLUÍDO"
   );
   $("#a-empty").classList.toggle("hidden", rows.length > 0);
+
   rows.forEach((r) => {
     const sum = reqSummary(r);
     const pill =
       sum.status === "PENDENTE" ? "pill-red" : "pill-amber";
+
+    const entregaTxt = fmtDate(r.deliveryDate);
+
     const card = document.createElement("div");
     card.className = "card text-sm";
     card.innerHTML = `
@@ -886,11 +919,7 @@ function renderAlmox() {
           </div>
         </div>
         <div>
-          Entrega: <b>${
-            r.deliveryDate
-              ? new Date(r.deliveryDate).toLocaleDateString()
-              : "—"
-          }</b>
+          Entrega: <b>${entregaTxt}</b>
         </div>
       </div>
       <div class="grid md:grid-cols-2 gap-2 mb-2">
@@ -927,35 +956,37 @@ function renderAlmox() {
       <div class="flex justify-end mt-2">
         <button class="btn a-save" type="button">Salvar atualização</button>
       </div>`;
+
     const d = card.querySelector(".a-date");
     if (r.deliveryDate)
-      d.value = new Date(r.deliveryDate)
-        .toISOString()
-        .substring(0, 10);
+      d.value = r.deliveryDate.substring(0, 10);
     const s = card.querySelector(".a-status");
     s.value = r.status || sum.status;
 
     card.querySelector(".a-save").onclick = () => {
-      const dateVal = d.value
-        ? new Date(d.value).toISOString()
-        : null;
+      const dateVal = d.value || null;
       const statusSel = s.value;
       const qtys = card.querySelectorAll(".a-qty");
       const dones = card.querySelectorAll(".a-done");
       const notes = card.querySelectorAll(".a-notes");
+
       let anyPending = false,
         anyDelivered = false,
         idx = 0;
+
       r.lines.forEach((l, i) => {
         const rec = r.received?.[i]?.receivedQty || 0;
         const pend = Math.max(0, l.qty - rec);
         if (pend <= 0) return;
+
         const q = Math.max(0, Number(qtys[idx].value || 0));
         const mark = dones[idx].checked;
         const add = mark ? pend : q;
         const newRec = rec + add;
+
         if (newRec >= l.qty) anyDelivered = true;
         else anyPending = true;
+
         state.reqs = state.reqs.map((xx) => {
           if (xx.id !== r.id) return xx;
           const rc = [...(xx.received || [])];
@@ -966,13 +997,16 @@ function renderAlmox() {
           };
           return { ...xx, received: rc };
         });
+
         state.items = state.items.map((it) =>
           it.id === l.itemId
             ? { ...it, qty: (it.qty || 0) + q }
             : it
         );
+
         idx++;
       });
+
       let finalStatus;
       if (!anyPending) {
         finalStatus = "CONCLUÍDO";
@@ -983,6 +1017,7 @@ function renderAlmox() {
       }
       if (statusSel === "CONCLUÍDO" && anyPending)
         finalStatus = "PARCIAL";
+
       setState({
         items: state.items,
         reqs: state.reqs.map((x) =>
@@ -991,6 +1026,7 @@ function renderAlmox() {
             : x
         ),
       });
+
       buildCal();
       renderAlmox();
       renderResumo();
