@@ -336,6 +336,35 @@ $("#cad-form").addEventListener("submit", async (e) => {
   e.target.reset();
   showTab("tab-itens");
 });
+// Preview e remoção da imagem no cadastro
+const cadImgInput = $("#c-img");
+const cadImgClear = $("#c-img-clear");
+const cadImgPreview = $("#c-img-preview");
+
+if (cadImgInput && cadImgPreview && cadImgClear) {
+  cadImgInput.addEventListener("change", () => {
+    const file = cadImgInput.files[0];
+    if (!file) {
+      cadImgPreview.textContent = "Nenhuma imagem selecionada.";
+      cadImgClear.classList.add("hidden");
+      return;
+    }
+
+    const r = new FileReader();
+    r.onload = () => {
+      cadImgPreview.innerHTML =
+        `<img src="${r.result}" class="preview-img">`;
+      cadImgClear.classList.remove("hidden");
+    };
+    r.readAsDataURL(file);
+  });
+
+  cadImgClear.onclick = () => {
+    cadImgInput.value = "";
+    cadImgPreview.textContent = "Nenhuma imagem selecionada.";
+    cadImgClear.classList.add("hidden");
+  };
+}
 
 // =========================
 // SOLICITAÇÕES
