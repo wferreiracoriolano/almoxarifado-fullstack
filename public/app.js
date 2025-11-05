@@ -109,18 +109,12 @@ function reqSummary(r) {
     p === 0 ? "CONCLUÍDO" : d > 0 ? "PARCIAL" : "PENDENTE";
   return { status, delivered: d, pending: p, total: r.lines.length };
 }
-function reqSummary(r){ ... }
 
 function fmtDate(dStr) {
   if (!dStr) return "—";
   const [y, m, d] = dStr.substring(0, 10).split("-");
   return `${d}/${m}/${y}`;
 }
-
-// =========================
-// Login
-// =========================
-
 
 // =========================
 // Login
@@ -167,8 +161,8 @@ function showTab(id) {
     "tab-almox",
     "tab-res",
     "tab-users",
-  ].forEach((t) => $("#"+t).classList.add("hidden"));
-  $("#"+id).classList.remove("hidden");
+  ].forEach((t) => $("#" + t).classList.add("hidden"));
+  $("#" + id).classList.remove("hidden");
 }
 $$(".tab").forEach((b) =>
   b.addEventListener("click", () => showTab(b.dataset.t))
@@ -646,15 +640,6 @@ function downloadReqPDF(r) {
   doc.save(`solicitacao-${r.header.pedido || r.id}.pdf`);
 }
 
-  });
-  y = pdfTable(doc, y, rows);
-  const tot = rows.reduce((a, b) => a + Number(b.total || 0), 0);
-  doc.setFontSize(11);
-  doc.text(`Total geral: R$ ${tot.toFixed(2)}`, 40, y + 10);
-  pdfFooter(doc);
-  doc.save(`solicitacao-${r.header.pedido || r.id}.pdf`);
-}
-
 $("#s-pdf-all").onclick = () => {
   const mine = state.reqs.filter(
     (r) => r.header.createdBy === state.session.name
@@ -770,7 +755,6 @@ function renderMine() {
   });
 }
 
-
 // =========================
 // ALMOX + calendário
 // =========================
@@ -884,8 +868,6 @@ function showDay(key) {
     box.appendChild(div);
   });
 }
-
-
 
 function renderAlmox() {
   const list = $("#a-list");
@@ -1086,6 +1068,8 @@ function renderResumo() {
     const sum = reqSummary(r);
     const pill =
       sum.status === "PENDENTE" ? "pill-red" : "pill-amber";
+    const entregaTxt = fmtDate(r.deliveryDate);
+
     const el = document.createElement("div");
     el.className = "card text-sm";
     el.innerHTML = `
@@ -1095,11 +1079,7 @@ function renderResumo() {
       r.header.fornecedor || "—"
     } <span class="pill ${pill}">${sum.status}</span>
         </div>
-        <div>Entrega: ${
-          r.deliveryDate
-            ? new Date(r.deliveryDate).toLocaleDateString()
-            : "—"
-        }</div>
+        <div>Entrega: ${entregaTxt}</div>
       </div>`;
     const lines = document.createElement("div");
     lines.className = "mt-1 text-xs text-slate-600";
@@ -1115,6 +1095,7 @@ function renderResumo() {
   });
 
   doneRows.forEach((r) => {
+    const entregaTxt = fmtDate(r.deliveryDate);
     const el = document.createElement("div");
     el.className = "card text-sm";
     el.innerHTML = `
@@ -1124,11 +1105,7 @@ function renderResumo() {
       r.header.fornecedor || "—"
     } <span class="pill pill-green">CONCLUÍDO</span>
         </div>
-        <div>Entrega: ${
-          r.deliveryDate
-            ? new Date(r.deliveryDate).toLocaleDateString()
-            : "—"
-        }</div>
+        <div>Entrega: ${entregaTxt}</div>
       </div>`;
     const lines = document.createElement("div");
     lines.className = "mt-1 text-xs text-slate-600";
@@ -1387,5 +1364,5 @@ function renderUsers() {
 // Start
 // =========================
 
-render();            // mostra tela (login ou app, dependendo da sessão)
+render();             // mostra tela (login ou app, dependendo da sessão)
 loadStateFromServer(); // carrega users/items/reqs do servidor ao iniciar
