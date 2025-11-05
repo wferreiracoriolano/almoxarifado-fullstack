@@ -129,102 +129,103 @@
         </section>
 
         <!-- ========== ABA SOLICITAÇÕES ========== -->
-        <section id="tab-sol" class="tab-view hidden">
-          <div class="section-grid-2">
-            <!-- Coluna esquerda: nova solicitação -->
-            <div>
-              <h2>Nova solicitação</h2>
-              <div class="form-group">
-                <label for="s-item">Item</label>
-                <select id="s-item" class="inp"></select>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="s-code">Código</label>
-                  <input id="s-code" class="inp" type="text" readonly />
-                </div>
-                <div class="form-group">
-                  <label for="s-unit">Unidade</label>
-                  <input id="s-unit" class="inp" type="text" readonly />
-                </div>
-                <div class="form-group">
-                  <label for="s-stock">Estoque</label>
-                  <input id="s-stock" class="inp" type="number" readonly />
-                </div>
-              </div>
+     <section id="tab-sol" class="tab-view hidden">
+  <div class="section-grid-2">
+    <!-- Coluna esquerda: nova solicitação -->
+    <div>
+      <h2>Nova solicitação</h2>
 
-              <div class="form-group">
-                <label>Foto do item</label>
-                <div id="s-photo" class="muted">Sem foto</div>
-              </div>
+      <!-- 1) Cabeçalho do pedido -->
+      <div class="form-group">
+        <label for="s-pedido">Nº do pedido</label>
+        <input id="s-pedido" class="inp" type="text" />
+      </div>
+      <div class="form-group">
+        <label for="s-linha">Linha / Obra / Setor</label>
+        <input id="s-linha" class="inp" type="text" />
+      </div>
+      <div class="form-group">
+        <label for="s-forn">Fornecedor</label>
+        <input id="s-forn" class="inp" type="text" />
+      </div>
+      <div class="form-group">
+        <label for="s-marca">Marca</label>
+        <input id="s-marca" class="inp" type="text" />
+      </div>
 
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="s-qt">Quantidade</label>
-                  <input id="s-qt" class="inp" type="number" min="0" value="0" />
-                </div>
-                <div class="form-group">
-                  <label for="s-vu">Valor unitário</label>
-                  <input id="s-vu" class="inp" type="number" step="0.01" min="0" value="0" />
-                </div>
-                <div class="form-group">
-                  <label for="s-total">Total</label>
-                  <input id="s-total" class="inp" type="text" readonly />
-                </div>
-              </div>
+      <hr />
 
-              <div class="actions-row">
-                <button id="s-add" class="btn2" type="button">Adicionar ao pedido</button>
-              </div>
+      <!-- 2) Seleção do item / materiais -->
+      <div class="form-group">
+        <label for="s-item">Item</label>
+        <select id="s-item" class="inp"></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="s-code">Código</label>
+          <input id="s-code" class="inp" type="text" readonly />
+        </div>
+        <div class="form-group">
+          <label for="s-unit">Unidade</label>
+          <input id="s-unit" class="inp" type="text" readonly />
+        </div>
+        <div class="form-group">
+          <label for="s-stock">Estoque</label>
+          <input id="s-stock" class="inp" type="number" readonly />
+        </div>
+      </div>
 
-              <hr />
+      <div class="form-group">
+        <label>Foto do item</label>
+        <div id="s-photo" class="muted">Sem foto</div>
+      </div>
 
-              <div class="form-group">
-                <label for="s-pedido">Nº do pedido</label>
-                <input id="s-pedido" class="inp" type="text" />
-              </div>
-              <div class="form-group">
-                <label for="s-linha">Linha / Obra / Setor</label>
-                <input id="s-linha" class="inp" type="text" />
-              </div>
-              <div class="form-group">
-                <label for="s-forn">Fornecedor</label>
-                <input id="s-forn" class="inp" type="text" />
-              </div>
-              <div class="form-group">
-                <label for="s-marca">Marca</label>
-                <input id="s-marca" class="inp" type="text" />
-              </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="s-qt">Quantidade</label>
+          <input id="s-qt" class="inp" type="number" min="0" value="0" />
+        </div>
+        <div class="form-group">
+          <label for="s-vu">Valor unitário</label>
+          <input id="s-vu" class="inp" type="number" step="0.01" min="0" value="0" />
+        </div>
+        <div class="form-group">
+          <label for="s-total">Total</label>
+          <input id="s-total" class="inp" type="text" readonly />
+        </div>
+      </div>
 
-              <div class="actions-row">
-                <button id="s-save" class="btn" type="button">Salvar solicitação</button>
-                <button id="s-pdf" class="btn2" type="button">PDF do rascunho</button>
-              </div>
-            </div>
+      <div class="actions-row">
+        <button id="s-add" class="btn2" type="button">Adicionar ao pedido</button>
+        <button id="s-save" class="btn" type="button">Salvar solicitação</button>
+        <button id="s-pdf" class="btn2" type="button">PDF do rascunho</button>
+      </div>
+    </div>
 
-            <!-- Coluna direita: rascunho e minhas solicitações -->
-            <div>
-              <h2>Materiais do pedido (rascunho)</h2>
-              <div id="s-empty" class="muted">Nenhum material adicionado.</div>
-              <div id="s-list" class="cards-column"></div>
+    <!-- Coluna direita: rascunho e minhas solicitações -->
+    <div>
+      <h2>Materiais do pedido (rascunho)</h2>
+      <div id="s-empty" class="muted">Nenhum material adicionado.</div>
+      <div id="s-list" class="cards-column"></div>
 
-              <div class="actions-row top-space">
-                <button id="s-pdf-all" class="btn2" type="button">
-                  PDF - Minhas solicitações
-                </button>
-              </div>
+      <div class="actions-row top-space">
+        <button id="s-pdf-all" class="btn2" type="button">
+          PDF - Minhas solicitações
+        </button>
+      </div>
 
-              <hr />
+      <hr />
 
-              <div class="section-header">
-                <h3>Minhas solicitações</h3>
-                <input id="s-q" class="inp small" type="text" placeholder="Filtrar por pedido, fornecedor, marca..." />
-              </div>
-              <div id="s-me-empty" class="muted">Você ainda não fez nenhuma solicitação.</div>
-              <div id="s-me" class="cards-column"></div>
-            </div>
-          </div>
-        </section>
+      <div class="section-header">
+        <h3>Minhas solicitações</h3>
+        <input id="s-q" class="inp small" type="text" placeholder="Filtrar por pedido, fornecedor, marca..." />
+      </div>
+      <div id="s-me-empty" class="muted">Você ainda não fez nenhuma solicitação.</div>
+      <div id="s-me" class="cards-column"></div>
+    </div>
+  </div>
+</section>
+
 
         <!-- ========== ABA ALMOXARIFE ========== -->
         <section id="tab-almox" class="tab-view hidden">
