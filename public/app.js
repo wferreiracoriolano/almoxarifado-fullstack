@@ -812,21 +812,21 @@ function buildCal() {
       const key = `${y}-${String(m + 1).padStart(2, "0")}-${String(
         d
       ).padStart(2, "0")}`;
-      const st = map[key];
+    const st = map[key];
       if (st) {
-        const color =
-          st === "PENDENTE"
-            ? "bg-red-600"
-            : st === "PARCIAL"
-            ? "bg-amber-600"
-            : "bg-green-600";
         const dot = document.createElement("span");
-        dot.className =
-          "inline-block w-2 h-2 rounded-full ml-1 " + color;
+        dot.className = "cal-dot";
+
+        // cor da bolinha
+        if (st === "PENDENTE") dot.classList.add("dot-red");
+        else if (st === "PARCIAL") dot.classList.add("dot-amber");
+        else dot.classList.add("dot-green");
+
         td.appendChild(dot);
         td.style.cursor = "pointer";
         td.onclick = () => showDay(key);
       }
+
 
       tr.appendChild(td);
       d++;
