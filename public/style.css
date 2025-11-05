@@ -466,6 +466,31 @@ label {
 .rounded { border-radius: 999px; }
 
 .mb-2 { margin-bottom: 0.5rem; }
+/* Preview da imagem no cadastro */
+
+.image-input-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.small-btn {
+  padding: 0.35rem 0.9rem;
+  font-size: 0.8rem;
+}
+
+.img-preview {
+  margin-top: 0.4rem;
+}
+
+.img-preview .preview-img {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+}
+
 /* ========= BOLINHA DO CALENDÁRIO ========= */
 
 .cal-dot {
