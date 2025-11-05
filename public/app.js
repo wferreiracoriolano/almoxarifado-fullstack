@@ -109,8 +109,7 @@ function reqSummary(r) {
     if (rec >= l.qty) d++;
     else p++;
   });
-  const status =
-    p === 0 ? "CONCLUÍDO" : d > 0 ? "PARCIAL" : "PENDENTE";
+  const status = p === 0 ? "CONCLUÍDO" : d > 0 ? "PARCIAL" : "PENDENTE";
   return { status, delivered: d, pending: p, total: r.lines.length };
 }
 
@@ -124,31 +123,40 @@ function fmtDate(dStr) {
 // Login
 // =========================
 
-$("#btn-login").onclick = async () => {
-  const u = $("#login-user").value.trim(),
-    p = $("#login-pass").value.trim();
+const btnLogin = $("#btn-login");
+if (btnLogin) {
+  btnLogin.onclick = async () => {
+    const u = $("#login-user").value.trim();
+    const p = $("#login-pass").value.trim();
 
-  // garante que já carregou os usuários do servidor
-  await ensureStateLoaded();
+    // garante que já carregou os usuários do servidor
+    await ensureStateLoaded();
 
-  const me = state.users.find(
-    (x) => x.username === u && x.password === p
-  );
-  if (!me) {
-    $("#login-err").classList.remove("hidden");
-    return;
-  }
-  $("#login-err").classList.add("hidden");
-  setState({ session: me });
-};
+    const me = state.users.find(
+      (x) => x.username === u && x.password === p
+    );
+    if (!me) {
+      $("#login-err").classList.remove("hidden");
+      return;
+    }
+    $("#login-err").classList.add("hidden");
+    setState({ session: me });
+  };
+}
 
 // Agora o "wipe" só limpa a sessão local (não apaga o banco do servidor)
-$("#btn-wipe").onclick = () => {
-  localStorage.removeItem(KEYS.session);
-  location.reload();
-};
+const btnWipe = $("#btn-wipe");
+if (btnWipe) {
+  btnWipe.onclick = () => {
+    localStorage.removeItem(KEYS.session);
+    location.reload();
+  };
+}
 
-$("#btn-logout").onclick = () => setState({ session: null });
+const btnLogout = $("#btn-logout");
+if (btnLogout) {
+  btnLogout.onclick = () => setState({ session: null });
+}
 
 // =========================
 // Tabs
@@ -203,8 +211,7 @@ function render() {
   $("#badge-user").textContent = state.session.name;
   const rb = $("#badge-role");
   rb.textContent = state.session.role;
-  rb.className =
-    "badge text-white " + roleClass(state.session.role);
+  rb.className = "badge text-white " + roleClass(state.session.role);
 
   setRoleVisibility();
   if (!$$(".tab.active").length) showTab("tab-itens");
@@ -222,10 +229,11 @@ function render() {
 // ITENS
 // =========================
 
-$("#itens-q").oninput = renderItens;
+const itensQ = $("#itens-q");
+if (itensQ) itensQ.oninput = renderItens;
 
 function renderItens() {
-  const q = ($("#itens-q").value || "").toLowerCase();
+  const q = (itensQ?.value || "").toLowerCase();
   let its = state.items;
   if (q)
     its = its.filter(
@@ -235,6 +243,7 @@ function renderItens() {
         (i.unit || "").toLowerCase().includes(q)
     );
   const grid = $("#itens-list");
+  if (!grid) return;
   grid.innerHTML = "";
   $("#itens-empty").classList.toggle("hidden", its.length > 0);
   its.forEach((it) => {
@@ -275,9 +284,9 @@ function renderItens() {
             : ""
         }
       </div>`;
-    const inN = el.querySelector(".in"),
-      outN = el.querySelector(".out"),
-      minN = el.querySelector(".min");
+    const inN = el.querySelector(".in");
+    const outN = el.querySelector(".out");
+    const minN = el.querySelector(".min");
 
     el.querySelector(".add").onclick = () => {
       const n = Math.max(0, Number(inN.value || 0));
@@ -321,45 +330,48 @@ function renderItens() {
 // CADASTRO DE ITENS
 // =========================
 
-$("#cad-form").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const fd = new FormData(e.target);
-  const file = fd.get("image");
-  const img = await new Promise((res, rej) => {
-    if (!file || !file.size) return res(null);
-    const r = new FileReader();
-    r.onload = () => res(r.result);
-    r.onerror = rej;
-    r.readAsDataURL(file);
-  });
-  const it = {
-    id: crypto.randomUUID(),
-    name: fd.get("name") || "",
-    code: fd.get("code") || "",
-    unit: fd.get("unit") || "",
-    qty: 0,
-    min: 0,
-    imageData: img,
-  };
-  setState({ items: [it, ...state.items] });
-
-  // limpa formulário + preview de imagem
-  e.target.reset();
-  if (cadImgPreview) {
-    cadImgPreview.textContent = "Nenhuma imagem selecionada.";
-  }
-  if (cadImgClear) {
-    cadImgClear.classList.add("hidden");
-  }
-
-  showTab("tab-itens");
-});
-
-// Preview e remoção da imagem no cadastro
+const cadForm = $("#cad-form");
 const cadImgInput = $("#c-img");
 const cadImgClear = $("#c-img-clear");
 const cadImgPreview = $("#c-img-preview");
 
+if (cadForm) {
+  cadForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const file = fd.get("image");
+    const img = await new Promise((res, rej) => {
+      if (!file || !file.size) return res(null);
+      const r = new FileReader();
+      r.onload = () => res(r.result);
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+    const it = {
+      id: crypto.randomUUID(),
+      name: fd.get("name") || "",
+      code: fd.get("code") || "",
+      unit: fd.get("unit") || "",
+      qty: 0,
+      min: 0,
+      imageData: img,
+    };
+    setState({ items: [it, ...state.items] });
+
+    // limpa formulário + preview de imagem
+    e.target.reset();
+    if (cadImgPreview) {
+      cadImgPreview.textContent = "Nenhuma imagem selecionada.";
+    }
+    if (cadImgClear) {
+      cadImgClear.classList.add("hidden");
+    }
+
+    showTab("tab-itens");
+  });
+}
+
+// Preview e remoção da imagem no cadastro
 if (cadImgInput && cadImgPreview && cadImgClear) {
   cadImgInput.addEventListener("change", () => {
     const file = cadImgInput.files[0];
@@ -392,6 +404,7 @@ let draft = [];
 
 function refreshSel() {
   const sel = $("#s-item");
+  if (!sel) return;
   sel.innerHTML = "";
   state.items.forEach((i) => {
     const o = document.createElement("option");
@@ -403,7 +416,9 @@ function refreshSel() {
 }
 
 function fillSel() {
-  const id = $("#s-item").value;
+  const sel = $("#s-item");
+  if (!sel) return;
+  const id = sel.value;
   const it = state.items.find((x) => x.id === id);
   $("#s-code").value = it ? it.code : "";
   $("#s-unit").value = it ? it.unit : "";
@@ -418,36 +433,43 @@ document.addEventListener("change", (e) => {
   if (e.target.id === "s-item") fillSel();
 });
 
-["s-qt", "s-vu"].forEach(
-  (id) =>
-    ($("#" + id).oninput = () => {
-      const qt = Number($("#s-qt").value || 0),
-        vu = Number($("#s-vu").value || 0);
+["s-qt", "s-vu"].forEach((id) => {
+  const el = $("#" + id);
+  if (el)
+    el.oninput = () => {
+      const qt = Number($("#s-qt").value || 0);
+      const vu = Number($("#s-vu").value || 0);
       $("#s-total").value = (qt * vu).toFixed(2);
-    })
-);
+    };
+});
 
-$("#s-add").onclick = () => {
-  const id = $("#s-item").value;
-  if (!id) return;
-  const it = state.items.find((x) => x.id === id);
-  const l = {
-    id: crypto.randomUUID(),
-    itemId: id,
-    name: it ? it.name : "",
-    code: it ? it.code : "",
-    unit: it ? it.unit : "",
-    photo: it ? it.imageData : null,
-    qty: Number($("#s-qt").value || 0),
-    unitPrice: Number($("#s-vu").value || 0),
+const btnSAdd = $("#s-add");
+if (btnSAdd) {
+  btnSAdd.onclick = () => {
+    const sel = $("#s-item");
+    if (!sel) return;
+    const id = sel.value;
+    if (!id) return;
+    const it = state.items.find((x) => x.id === id);
+    const l = {
+      id: crypto.randomUUID(),
+      itemId: id,
+      name: it ? it.name : "",
+      code: it ? it.code : "",
+      unit: it ? it.unit : "",
+      photo: it ? it.imageData : null,
+      qty: Number($("#s-qt").value || 0),
+      unitPrice: Number($("#s-vu").value || 0),
+    };
+    l.total = l.qty * l.unitPrice;
+    draft = [...draft, l];
+    renderDraft();
   };
-  l.total = l.qty * l.unitPrice;
-  draft = [...draft, l];
-  renderDraft();
-};
+}
 
 function renderDraft() {
   const list = $("#s-list");
+  if (!list) return;
   list.innerHTML = "";
   if (!draft.length) {
     $("#s-empty").classList.remove("hidden");
@@ -490,43 +512,46 @@ function renderDraft() {
   });
 }
 
-$("#s-save").onclick = () => {
-  if (!draft.length) return alert("Adicione materiais.");
-  const head = {
-    pedido: $("#s-pedido").value.trim(),
-    linha: $("#s-linha").value.trim(),
-    fornecedor: $("#s-forn").value.trim(),
-    marca: $("#s-marca").value.trim(),
-    createdBy: state.session.name,
-    createdAt: new Date().toISOString(),
+const btnSSave = $("#s-save");
+if (btnSSave) {
+  btnSSave.onclick = () => {
+    if (!draft.length) return alert("Adicione materiais.");
+    const head = {
+      pedido: $("#s-pedido").value.trim(),
+      linha: $("#s-linha").value.trim(),
+      fornecedor: $("#s-forn").value.trim(),
+      marca: $("#s-marca").value.trim(),
+      createdBy: state.session.name,
+      createdAt: new Date().toISOString(),
+    };
+    const received = draft.map(() => ({
+      receivedQty: 0,
+      received: false,
+      notes: "",
+    }));
+    const req = {
+      id: crypto.randomUUID(),
+      header: head,
+      lines: draft,
+      deliveryDate: null,
+      received,
+      status: "PENDENTE",
+    };
+    setState({ reqs: [req, ...state.reqs] });
+    draft = [];
+    renderDraft();
+    $("#s-pedido").value =
+      $("#s-linha").value =
+      $("#s-forn").value =
+      $("#s-marca").value =
+        "";
+    renderMine();
+    renderAlmox();
+    buildCal();
+    renderResumo();
+    alert("Solicitação salva!");
   };
-  const received = draft.map(() => ({
-    receivedQty: 0,
-    received: false,
-    notes: "",
-  }));
-  const req = {
-    id: crypto.randomUUID(),
-    header: head,
-    lines: draft,
-    deliveryDate: null,
-    received,
-    status: "PENDENTE",
-  };
-  setState({ reqs: [req, ...state.reqs] });
-  draft = [];
-  renderDraft();
-  $("#s-pedido").value =
-    $("#s-linha").value =
-    $("#s-forn").value =
-    $("#s-marca").value =
-      "";
-  renderMine();
-  renderAlmox();
-  buildCal();
-  renderResumo();
-  alert("Solicitação salva!");
-};
+}
 
 // =========================
 // PDF helpers (layout 6.2)
@@ -572,7 +597,7 @@ function pdfTable(doc, y, rows, cols) {
         t: "V.U.",
         w: 50,
         r: true,
-        fmt: (v) => `R$ ${Number(v || 0).toFixed(2)`,
+        fmt: (v) => `R$ ${Number(v || 0).toFixed(2)}`,
       },
       {
         k: "total",
@@ -599,12 +624,7 @@ function pdfTable(doc, y, rows, cols) {
 
   y += 6;
   doc.setDrawColor(200);
-  doc.line(
-    x0,
-    y,
-    x0 + cols.reduce((a, c) => a + c.w, 0),
-    y
-  );
+  doc.line(x0, y, x0 + cols.reduce((a, c) => a + c.w, 0), y);
   y += 8;
 
   // Linhas
@@ -635,27 +655,30 @@ function pdfTable(doc, y, rows, cols) {
 }
 
 // PDFs
-$("#s-pdf").onclick = () => {
-  if (!draft.length) return alert("Adicione materiais.");
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit: "pt", format: "a4" });
-  let y = pdfHeader(doc, "Pedido (Rascunho)");
-  const rows = draft.map((l, i) => ({
-    idx: i + 1,
-    name: l.name,
-    code: l.code || "",
-    unit: l.unit || "",
-    qty: l.qty,
-    unitPrice: l.unitPrice,
-    total: l.total,
-    received: 0,
-    left: l.qty,
-    notes: "",
-  }));
-  y = pdfTable(doc, y, rows);
-  pdfFooter(doc);
-  doc.save("rascunho.pdf");
-};
+const btnSPdf = $("#s-pdf");
+if (btnSPdf) {
+  btnSPdf.onclick = () => {
+    if (!draft.length) return alert("Adicione materiais.");
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    let y = pdfHeader(doc, "Pedido (Rascunho)");
+    const rows = draft.map((l, i) => ({
+      idx: i + 1,
+      name: l.name,
+      code: l.code || "",
+      unit: l.unit || "",
+      qty: l.qty,
+      unitPrice: l.unitPrice,
+      total: l.total,
+      received: 0,
+      left: l.qty,
+      notes: "",
+    }));
+    y = pdfTable(doc, y, rows);
+    pdfFooter(doc);
+    doc.save("rascunho.pdf");
+  };
+}
 
 function downloadReqPDF(r) {
   const { jsPDF } = window.jspdf;
@@ -701,63 +724,68 @@ function downloadReqPDF(r) {
   doc.save(`solicitacao-${r.header.pedido || r.id}.pdf`);
 }
 
-$("#s-pdf-all").onclick = () => {
-  const mine = state.reqs.filter(
-    (r) => r.header.createdBy === state.session.name
-  );
-  if (!mine.length) return alert("Sem solicitações.");
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit: "pt", format: "a4" });
-  let y = pdfHeader(doc, "Minhas Solicitações");
-  mine.forEach((r) => {
-    doc.setFontSize(11);
-    doc.text(
-      `• Pedido: ${r.header.pedido || "-"}  • Fornecedor: ${
-        r.header.fornecedor || "-"
-      }  • Marca: ${r.header.marca || "-"}`,
-      40,
-      y
+const btnSPdfAll = $("#s-pdf-all");
+if (btnSPdfAll) {
+  btnSPdfAll.onclick = () => {
+    const mine = state.reqs.filter(
+      (r) => r.header.createdBy === state.session.name
     );
-    y += 12;
-    const rows = r.lines.map((l, i) => {
-      const rec =
-        (r.received && r.received[i]
-          ? r.received[i].receivedQty
-          : 0) || 0;
-      return {
-        idx: i + 1,
-        name: l.name,
-        code: l.code || "",
-        unit: l.unit || "",
-        qty: l.qty,
-        unitPrice: l.unitPrice || 0,
-        total: (l.qty || 0) * (l.unitPrice || 0),
-        received: rec,
-        left: Math.max(0, (l.qty || 0) - rec),
-        notes: "",
-      };
+    if (!mine.length) return alert("Sem solicitações.");
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    let y = pdfHeader(doc, "Minhas Solicitações");
+    mine.forEach((r) => {
+      doc.setFontSize(11);
+      doc.text(
+        `• Pedido: ${r.header.pedido || "-"}  • Fornecedor: ${
+          r.header.fornecedor || "-"
+        }  • Marca: ${r.header.marca || "-"}`,
+        40,
+        y
+      );
+      y += 12;
+      const rows = r.lines.map((l, i) => {
+        const rec =
+          (r.received && r.received[i]
+            ? r.received[i].receivedQty
+            : 0) || 0;
+        return {
+          idx: i + 1,
+          name: l.name,
+          code: l.code || "",
+          unit: l.unit || "",
+          qty: l.qty,
+          unitPrice: l.unitPrice || 0,
+          total: (l.qty || 0) * (l.unitPrice || 0),
+          received: rec,
+          left: Math.max(0, (l.qty || 0) - rec),
+          notes: "",
+        };
+      });
+      y = pdfTable(doc, y, rows);
+      y += 6;
+      if (y > doc.internal.pageSize.getHeight() - 60) {
+        doc.addPage();
+        y = 40;
+      }
     });
-    y = pdfTable(doc, y, rows);
-    y += 6;
-    if (y > doc.internal.pageSize.getHeight() - 60) {
-      doc.addPage();
-      y = 40;
-    }
-  });
-  pdfFooter(doc);
-  doc.save("minhas-solicitacoes.pdf");
-};
+    pdfFooter(doc);
+    doc.save("minhas-solicitacoes.pdf");
+  };
+}
 
 // =========================
 // Minhas solicitações (lista)
 // =========================
 
-$("#s-q").oninput = renderMine;
+const sQ = $("#s-q");
+if (sQ) sQ.oninput = renderMine;
 
 function renderMine() {
   const list = $("#s-me");
+  if (!list) return;
   list.innerHTML = "";
-  const q = ($("#s-q").value || "").toLowerCase();
+  const q = (sQ?.value || "").toLowerCase();
 
   const mine = state.reqs
     .filter((r) => r.header.createdBy === state.session.name)
@@ -828,17 +856,21 @@ function renderMine() {
 let calRef = new Date();
 
 function buildCal() {
-  const y = calRef.getFullYear(),
-    m = calRef.getMonth();
+  const y = calRef.getFullYear();
+  const m = calRef.getMonth();
   const first = new Date(y, m, 1).getDay();
   const total = new Date(y, m + 1, 0).getDate();
 
-  $("#c-title").textContent = calRef.toLocaleString("pt-BR", {
-    month: "long",
-    year: "numeric",
-  });
+  const titleEl = $("#c-title");
+  if (titleEl) {
+    titleEl.textContent = calRef.toLocaleString("pt-BR", {
+      month: "long",
+      year: "numeric",
+    });
+  }
 
   const body = $("#c-body");
+  if (!body) return;
   body.innerHTML = "";
   let d = 1;
 
@@ -900,25 +932,30 @@ function buildCal() {
 }
 
 // Navegação do calendário (mês anterior / próximo)
-$("#c-prev").onclick = () => {
-  calRef.setMonth(calRef.getMonth() - 1);
-  buildCal();
-};
+const cPrev = $("#c-prev");
+if (cPrev) {
+  cPrev.onclick = () => {
+    calRef.setMonth(calRef.getMonth() - 1);
+    buildCal();
+  };
+}
 
-$("#c-next").onclick = () => {
-  calRef.setMonth(calRef.getMonth() + 1);
-  buildCal();
-};
+const cNext = $("#c-next");
+if (cNext) {
+  cNext.onclick = () => {
+    calRef.setMonth(calRef.getMonth() + 1);
+    buildCal();
+  };
+}
 
 function showDay(key) {
   const box = $("#c-day");
+  if (!box) return;
   box.innerHTML = `<div class="font-semibold mb-1">Programação em ${fmtDate(
     key
   )}</div>`;
   const rows = state.reqs.filter(
-    (r) =>
-      r.deliveryDate &&
-      r.deliveryDate.substring(0, 10) === key
+    (r) => r.deliveryDate && r.deliveryDate.substring(0, 10) === key
   );
   if (!rows.length) {
     box.innerHTML += '<div class="muted">Nada programado.</div>';
@@ -946,6 +983,7 @@ function showDay(key) {
 
 function renderAlmox() {
   const list = $("#a-list");
+  if (!list) return;
   list.innerHTML = "";
   const rows = state.reqs.filter(
     (r) => reqSummary(r).status !== "CONCLUÍDO"
@@ -1015,8 +1053,7 @@ function renderAlmox() {
       </div>`;
 
     const d = card.querySelector(".a-date");
-    if (r.deliveryDate)
-      d.value = r.deliveryDate.substring(0, 10);
+    if (r.deliveryDate) d.value = r.deliveryDate.substring(0, 10);
     const s = card.querySelector(".a-status");
     s.value = r.status || sum.status;
 
@@ -1056,9 +1093,7 @@ function renderAlmox() {
         });
 
         state.items = state.items.map((it) =>
-          it.id === l.itemId
-            ? { ...it, qty: (it.qty || 0) + q }
-            : it
+          it.id === l.itemId ? { ...it, qty: (it.qty || 0) + q } : it
         );
 
         idx++;
@@ -1100,13 +1135,15 @@ function renderAlmox() {
 // RESUMO + busca
 // =========================
 
-$("#r-q").oninput = renderResumo;
+const rQ = $("#r-q");
+if (rQ) rQ.oninput = renderResumo;
 
 function renderResumo() {
-  const q = ($("#r-q").value || "").toLowerCase();
+  const q = (rQ?.value || "").toLowerCase();
   const pend = $("#r-pend");
-  pend.innerHTML = "";
   const done = $("#r-done");
+  if (!pend || !done) return;
+  pend.innerHTML = "";
   done.innerHTML = "";
   const filterRows = (rows) =>
     rows.filter((r) =>
@@ -1121,23 +1158,13 @@ function renderResumo() {
         .includes(q)
     );
   const pendRows = filterRows(
-    state.reqs.filter(
-      (r) => reqSummary(r).status !== "CONCLUÍDO"
-    )
+    state.reqs.filter((r) => reqSummary(r).status !== "CONCLUÍDO")
   );
   const doneRows = filterRows(
-    state.reqs.filter(
-      (r) => reqSummary(r).status === "CONCLUÍDO"
-    )
+    state.reqs.filter((r) => reqSummary(r).status === "CONCLUÍDO")
   );
-  $("#r-pend-empty").classList.toggle(
-    "hidden",
-    pendRows.length > 0
-  );
-  $("#r-done-empty").classList.toggle(
-    "hidden",
-    doneRows.length > 0
-  );
+  $("#r-pend-empty").classList.toggle("hidden", pendRows.length > 0);
+  $("#r-done-empty").classList.toggle("hidden", doneRows.length > 0);
 
   pendRows.forEach((r) => {
     const sum = reqSummary(r);
@@ -1224,6 +1251,7 @@ function renderResumo() {
   });
 
   const box = $("#r-tot");
+  if (!box) return;
   box.innerHTML = "";
   const agg = {};
   state.reqs.forEach((r) =>
@@ -1250,97 +1278,104 @@ function renderResumo() {
   });
 }
 
-$("#r-pdf").onclick = () => {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit: "pt", format: "a4" });
-  let y = pdfHeader(doc, "Resumo Geral");
-  const sections = [
-    {
-      title: "Pendentes/Parciais",
-      rows: state.reqs.filter(
-        (r) => reqSummary(r).status !== "CONCLUÍDO"
-      ),
-    },
-    {
-      title: "Concluídas",
-      rows: state.reqs.filter(
-        (r) => reqSummary(r).status === "CONCLUÍDO"
-      ),
-    },
-  ];
-  sections.forEach((sec) => {
-    doc.setFontSize(12);
-    doc.text(sec.title, 40, y);
-    y += 14;
-    sec.rows.forEach((r) => {
-      const rows = r.lines.map((l, i) => {
-        const rec =
-          (r.received && r.received[i]
-            ? r.received[i].receivedQty
-            : 0) || 0;
-        return {
-          idx: i + 1,
-          name: l.name,
-          code: l.code || "",
-          unit: l.unit || "",
-          qty: l.qty,
-          unitPrice: l.unitPrice || 0,
-          total: (l.qty || 0) * (l.unitPrice || 0),
-          received: rec,
-          left: Math.max(0, (l.qty || 0) - rec),
-          notes: "",
-        };
+const btnRPdf = $("#r-pdf");
+if (btnRPdf) {
+  btnRPdf.onclick = () => {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    let y = pdfHeader(doc, "Resumo Geral");
+    const sections = [
+      {
+        title: "Pendentes/Parciais",
+        rows: state.reqs.filter(
+          (r) => reqSummary(r).status !== "CONCLUÍDO"
+        ),
+      },
+      {
+        title: "Concluídas",
+        rows: state.reqs.filter(
+          (r) => reqSummary(r).status === "CONCLUÍDO"
+        ),
+      },
+    ];
+    sections.forEach((sec) => {
+      doc.setFontSize(12);
+      doc.text(sec.title, 40, y);
+      y += 14;
+      sec.rows.forEach((r) => {
+        const rows = r.lines.map((l, i) => {
+          const rec =
+            (r.received && r.received[i]
+              ? r.received[i].receivedQty
+              : 0) || 0;
+          return {
+            idx: i + 1,
+            name: l.name,
+            code: l.code || "",
+            unit: l.unit || "",
+            qty: l.qty,
+            unitPrice: l.unitPrice || 0,
+            total: (l.qty || 0) * (l.unitPrice || 0),
+            received: rec,
+            left: Math.max(0, (l.qty || 0) - rec),
+            notes: "",
+          };
+        });
+        y = pdfTable(doc, y, rows);
+        y += 6;
+        if (y > doc.internal.pageSize.getHeight() - 60) {
+          doc.addPage();
+          y = 40;
+        }
       });
-      y = pdfTable(doc, y, rows);
       y += 6;
-      if (y > doc.internal.pageSize.getHeight() - 60) {
-        doc.addPage();
-        y = 40;
-      }
     });
-    y += 6;
-  });
-  pdfFooter(doc);
-  doc.save("resumo-geral.pdf");
-};
+    pdfFooter(doc);
+    doc.save("resumo-geral.pdf");
+  };
+}
 
 // =========================
 // Usuários
 // =========================
 
-$("#u-create").onclick = () => {
-  if (state.session.role !== "ADMIN")
-    return alert("Apenas ADMIN.");
-  const name = $("#u-name").value.trim(),
-    username = $("#u-username").value.trim(),
-    password = $("#u-password").value,
-    role = $("#u-role").value;
-  if (!name || !username || !password)
-    return alert("Preencha tudo.");
-  if (state.users.some((u) => u.username === username))
-    return alert("Login já existe.");
-  setState({
-    users: [
-      {
-        id: crypto.randomUUID(),
-        name,
-        username,
-        password,
-        role,
-      },
-      ...state.users,
-    ],
-  });
-  $("#u-name").value =
-    $("#u-username").value =
-    $("#u-password").value =
-      "";
-  $("#u-role").value = "SOLICITANTE";
-  renderUsers();
-};
+const btnUCreate = $("#u-create");
+if (btnUCreate) {
+  btnUCreate.onclick = () => {
+    if (state.session.role !== "ADMIN")
+      return alert("Apenas ADMIN.");
+    const name = $("#u-name").value.trim();
+    const username = $("#u-username").value.trim();
+    const password = $("#u-password").value;
+    const role = $("#u-role").value;
+    if (!name || !username || !password)
+      return alert("Preencha tudo.");
+    if (state.users.some((u) => u.username === username))
+      return alert("Login já existe.");
+    setState({
+      users: [
+        {
+          id: crypto.randomUUID(),
+          name,
+          username,
+          password,
+          role,
+        },
+        ...state.users,
+      ],
+    });
+    $("#u-name").value =
+      $("#u-username").value =
+      $("#u-password").value =
+        "";
+    $("#u-role").value = "SOLICITANTE";
+    renderUsers();
+  };
+}
 
 function renderUsers() {
   const list = $("#u-list");
+  if (!list) return;
   list.innerHTML = "";
   $("#u-empty").classList.toggle("hidden", state.users.length > 0);
   const isAdmin = state.session.role === "ADMIN";
@@ -1377,9 +1412,7 @@ function renderUsers() {
         </div>`;
       el.querySelector(".u-save").onclick = () => {
         const newRole = el.querySelector(".u-role").value;
-        const admins = state.users.filter(
-          (x) => x.role === "ADMIN"
-        );
+        const admins = state.users.filter((x) => x.role === "ADMIN");
         if (
           u.role === "ADMIN" &&
           admins.length === 1 &&
@@ -1403,9 +1436,7 @@ function renderUsers() {
       el.querySelector(".u-del").onclick = () => {
         if (state.session.id === u.id)
           return alert("Você não pode excluir a si mesmo.");
-        const admins = state.users.filter(
-          (x) => x.role === "ADMIN"
-        );
+        const admins = state.users.filter((x) => x.role === "ADMIN");
         if (u.role === "ADMIN" && admins.length === 1) {
           alert("Não é possível excluir o último ADMIN.");
           return;
@@ -1439,5 +1470,5 @@ function renderUsers() {
 // Start
 // =========================
 
-render();             // mostra tela (login ou app, dependendo da sessão)
+render();              // mostra tela (login ou app, dependendo da sessão)
 loadStateFromServer(); // carrega users/items/reqs do servidor ao iniciar
